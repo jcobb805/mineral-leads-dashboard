@@ -148,6 +148,7 @@
             background: #1a1a1a;
             border-radius: 8px;
             border: 1px solid #333;
+            scrollbar-gutter: stable;
         }
 
         table {
@@ -170,6 +171,7 @@
             cursor: pointer;
             user-select: none;
             white-space: nowrap;
+            min-width: 200px;
         }
 
         th:hover {
@@ -179,6 +181,8 @@
         td {
             padding: 12px;
             border-top: 1px solid #2a2a2a;
+            white-space: nowrap;
+            min-width: 200px;
         }
 
         tr:hover {
@@ -561,16 +565,41 @@
             <div class="controls">
                 <input type="text" class="search-box" id="searchBox" placeholder="Search by name or county..." onkeyup="filterGrid()">
             </div>
-            <div class="table-wrapper">
+            <div id="scrollbarTop" style="overflow-x: auto; overflow-y: hidden; height: 16px; background: #1a1a1a; border-radius: 8px 8px 0 0; border: 1px solid #333; border-bottom: none;">
+                <div style="width: 100%; height: 1px;"></div>
+            </div>
+            <div class="table-wrapper" id="tableWrapper">
                 <table id="leadsTable">
-                    <thead>
-                        <tr>
-                            <th onclick="sortTable('Owner Name')">Owner Name</th>
-                            <th onclick="sortTable('County Interest Held')">County</th>
-                            <th onclick="sortTable('NMA')">NMA</th>
-                            <th onclick="sortTable('Owner City')">City</th>
-                            <th onclick="sortTable('Owner Phone')">Phone</th>
+                    <thead id="tableHead">
+                        <tr id="headerRow">
+                            <th onclick="sortTable('Owner ID')">Owner ID</th>
+                            <th onclick="sortTable('Owner Name')" style="min-width: 120px;">Owner Name</th>
+                            <th onclick="sortTable('In Care Of')" style="min-width: 80px;">In Care Of</th>
+                            <th onclick="sortTable('Owner Street Address')">Owner Street Address</th>
+                            <th onclick="sortTable('Owner City')">Owner City</th>
+                            <th onclick="sortTable('Owner State')">Owner State</th>
+                            <th onclick="sortTable('Owner Zip')">Owner Zip</th>
+                            <th onclick="sortTable('Owner Phone')">Owner Phone</th>
+                            <th onclick="sortTable('County')">County</th>
+                            <th onclick="sortTable('County Interest Held')">County Interest Held</th>
                             <th onclick="sortTable('Description')">Description</th>
+                            <th onclick="sortTable('Interest')">Interest</th>
+                            <th onclick="sortTable('NRI in UNK LEASE')">NRI in UNK LEASE</th>
+                            <th onclick="sortTable('NMA')">NMA</th>
+                            <th onclick="sortTable('Quick Title Notes')">Quick Title Notes</th>
+                            <th onclick="sortTable('Title Status')">Title Status</th>
+                            <th onclick="sortTable('Likely Deceased?')">Likely Deceased?</th>
+                            <th onclick="sortTable('Heir Clues / Notes')">Heir Clues / Notes</th>
+                            <th onclick="sortTable('Recommended Next Action')">Recommended Next Action</th>
+                            <th onclick="sortTable('Date Reviewed')">Date Reviewed</th>
+                            <th onclick="sortTable('Notes')">Notes</th>
+                            <th onclick="sortTable('GRANT')">GRANT</th>
+                            <th onclick="sortTable('APRIL')">APRIL</th>
+                            <th onclick="sortTable('WENDY')">WENDY</th>
+                            <th onclick="sortTable('Reason for unknown Address')">Reason for unknown Address</th>
+                            <th onclick="sortTable('Interest in other Sections/Counties')">Interest in other Sections/Counties</th>
+                            <th onclick="sortTable('Unknown in other Producing Properties')">Unknown in other Producing Properties</th>
+                            <th onclick="sortTable('Lead Quality (10 BEST)')">Lead Quality (10 BEST)</th>
                             <th>My Notes</th>
                         </tr>
                     </thead>
@@ -728,29 +757,39 @@
             document.getElementById('stat-overdue').textContent = overdueCount.toLocaleString();
         }
 
+
         function renderGrid() {
             const tbody = document.getElementById('gridBody');
             tbody.innerHTML = '';
 
             if (filteredLeads.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#666;padding:40px;">No leads match your filters</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="29" style="text-align:center;color:#666;padding:40px;">No leads match your filters</td></tr>`;
                 return;
             }
+
+            const columns = [
+                'Owner ID', 'Owner Name', 'In Care Of', 'Owner Street Address', 'Owner City', 'Owner State', 'Owner Zip', 'Owner Phone', 'County', 'County Interest Held',
+                'Description', 'Interest', 'NRI in UNK LEASE', 'NMA', 'Quick Title Notes', 'Title Status', 'Likely Deceased?', 'Heir Clues / Notes', 'Recommended Next Action', 'Date Reviewed',
+                'Notes', 'GRANT', 'APRIL', 'WENDY', 'Reason for unknown Address', 'Interest in other Sections/Counties', 'Unknown in other Producing Properties', 'Lead Quality (10 BEST)'
+            ];
 
             filteredLeads.forEach(lead => {
                 const row = document.createElement('tr');
                 const ownerID = lead['Owner ID'] || lead['Owner Name'];
                 const localNotes = getLocalNotes(ownerID);
 
-                row.innerHTML = `
-                    <td class="owner-name">${lead['Owner Name'] || '—'}</td>
-                    <td>${lead['County Interest Held'] || lead['County'] || '—'}</td>
-                    <td>${parseFloat(lead['NMA'] || 0).toFixed(2)}</td>
-                    <td>${lead['Owner City'] || '—'}</td>
-                    <td>${lead['Owner Phone'] ? lead['Owner Phone'].split('\n')[0] : '—'}</td>
-                    <td>${lead['Description'] || '—'}</td>
-                    <td><button class="notes-btn" onclick="editNotes('${ownerID.replace(/'/g, "\\'")}', '${(lead['Owner Name'] || '').replace(/'/g, "\\'")}')">${localNotes ? '📝 ' + localNotes.substring(0, 20) + (localNotes.length > 20 ? '...' : '') : '+ Add Note'}</button></td>
-                `;
+                let cellsHTML = '';
+                columns.forEach(col => {
+                    let value = lead[col] || '—';
+                    if (col === 'NMA' && !isNaN(value) && value !== '—') {
+                        value = parseFloat(value).toFixed(2);
+                    }
+                    cellsHTML += `<td>${value}</td>`;
+                });
+
+                cellsHTML += `<td><button class="notes-btn" onclick="editNotes('${ownerID.replace(/'/g, "\\'")}', '${(lead['Owner Name'] || '').replace(/'/g, "\\'")}')">${localNotes ? '📝 ' + localNotes.substring(0, 20) + (localNotes.length > 20 ? '...' : '') : '+ Add Note'}</button></td>`;
+
+                row.innerHTML = cellsHTML;
                 tbody.appendChild(row);
             });
         }
@@ -941,6 +980,26 @@
 
             renderGrid();
         }
+
+        function syncScroll() {
+            const scrollbarTop = document.getElementById('scrollbarTop');
+            const tableWrapper = document.getElementById('tableWrapper');
+            scrollbarTop.scrollLeft = tableWrapper.scrollLeft;
+            tableWrapper.scrollLeft = scrollbarTop.scrollLeft;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const scrollbarTop = document.getElementById('scrollbarTop');
+            const tableWrapper = document.getElementById('tableWrapper');
+
+            scrollbarTop.addEventListener('scroll', syncScroll);
+            tableWrapper.addEventListener('scroll', syncScroll);
+
+            const innerDiv = scrollbarTop.querySelector('div');
+            tableWrapper.addEventListener('scroll', function() {
+                innerDiv.style.width = tableWrapper.scrollWidth + 'px';
+            });
+        });
 
         function filterCalendar() {
             renderCalendar();
