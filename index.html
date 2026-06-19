@@ -171,7 +171,7 @@
             cursor: pointer;
             user-select: none;
             white-space: nowrap;
-            min-width: 200px;
+            min-width: 130px;
         }
 
         th:hover {
@@ -182,7 +182,7 @@
             padding: 12px;
             border-top: 1px solid #2a2a2a;
             white-space: nowrap;
-            min-width: 200px;
+            min-width: 130px;
         }
 
         tr:hover {
@@ -572,34 +572,25 @@
                 <table id="leadsTable">
                     <thead id="tableHead">
                         <tr id="headerRow">
-                            <th onclick="sortTable('Owner ID')">Owner ID</th>
-                            <th onclick="sortTable('Owner Name')" style="min-width: 120px;">Owner Name</th>
-                            <th onclick="sortTable('In Care Of')" style="min-width: 80px;">In Care Of</th>
-                            <th onclick="sortTable('Owner Street Address')">Owner Street Address</th>
-                            <th onclick="sortTable('Owner City')">Owner City</th>
-                            <th onclick="sortTable('Owner State')">Owner State</th>
-                            <th onclick="sortTable('Owner Zip')">Owner Zip</th>
-                            <th onclick="sortTable('Owner Phone')">Owner Phone</th>
-                            <th onclick="sortTable('County')">County</th>
-                            <th onclick="sortTable('County Interest Held')">County Interest Held</th>
-                            <th onclick="sortTable('Description')">Description</th>
-                            <th onclick="sortTable('Interest')">Interest</th>
-                            <th onclick="sortTable('NRI in UNK LEASE')">NRI in UNK LEASE</th>
+                            <th onclick="sortTable('Owner Name')">Owner Name</th>
+                            <th onclick="sortTable('Main Contact')">Main Contact</th>
+                            <th onclick="sortTable('Owner Phone')">Phone</th>
+                            <th onclick="sortTable('Email')">Email</th>
+                            <th onclick="sortTable('Status')">Status</th>
                             <th onclick="sortTable('NMA')">NMA</th>
-                            <th onclick="sortTable('Quick Title Notes')">Quick Title Notes</th>
-                            <th onclick="sortTable('Title Status')">Title Status</th>
-                            <th onclick="sortTable('Likely Deceased?')">Likely Deceased?</th>
-                            <th onclick="sortTable('Heir Clues / Notes')">Heir Clues / Notes</th>
-                            <th onclick="sortTable('Recommended Next Action')">Recommended Next Action</th>
-                            <th onclick="sortTable('Date Reviewed')">Date Reviewed</th>
                             <th onclick="sortTable('Notes')">Notes</th>
-                            <th onclick="sortTable('GRANT')">GRANT</th>
-                            <th onclick="sortTable('APRIL')">APRIL</th>
-                            <th onclick="sortTable('WENDY')">WENDY</th>
-                            <th onclick="sortTable('Reason for unknown Address')">Reason for unknown Address</th>
-                            <th onclick="sortTable('Interest in other Sections/Counties')">Interest in other Sections/Counties</th>
-                            <th onclick="sortTable('Unknown in other Producing Properties')">Unknown in other Producing Properties</th>
-                            <th onclick="sortTable('Lead Quality (10 BEST)')">Lead Quality (10 BEST)</th>
+                            <th onclick="sortTable('Full Legal')">Full Legal</th>
+                            <th onclick="sortTable('Owner Street Address')">Street Address</th>
+                            <th onclick="sortTable('Owner City')">City</th>
+                            <th onclick="sortTable('Owner State')">St</th>
+                            <th onclick="sortTable('Owner Zip')">Zip</th>
+                            <th onclick="sortTable('Offer Amount')">Offer Amount</th>
+                            <th onclick="sortTable('County')">County</th>
+                            <th onclick="sortTable('Last Contact Date')">Last Contact Date</th>
+                            <th onclick="sortTable('Follow Up Needed')">Follow Up Needed</th>
+                            <th onclick="sortTable('Follow Up Date')">Follow Up Date</th>
+                            <th onclick="sortTable('Follow Up Notes')">Follow Up Notes</th>
+                            <th onclick="sortTable('Deal Stage')">Deal Stage</th>
                             <th>My Notes</th>
                         </tr>
                     </thead>
@@ -763,14 +754,13 @@
             tbody.innerHTML = '';
 
             if (filteredLeads.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="29" style="text-align:center;color:#666;padding:40px;">No leads match your filters</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="20" style="text-align:center;color:#666;padding:40px;">No leads match your filters</td></tr>`;
                 return;
             }
 
             const columns = [
-                'Owner ID', 'Owner Name', 'In Care Of', 'Owner Street Address', 'Owner City', 'Owner State', 'Owner Zip', 'Owner Phone', 'County', 'County Interest Held',
-                'Description', 'Interest', 'NRI in UNK LEASE', 'NMA', 'Quick Title Notes', 'Title Status', 'Likely Deceased?', 'Heir Clues / Notes', 'Recommended Next Action', 'Date Reviewed',
-                'Notes', 'GRANT', 'APRIL', 'WENDY', 'Reason for unknown Address', 'Interest in other Sections/Counties', 'Unknown in other Producing Properties', 'Lead Quality (10 BEST)'
+                'Owner Name', 'Main Contact', 'Owner Phone', 'Email', 'Status', 'NMA', 'Notes', 'Full Legal', 'Owner Street Address', 'Owner City',
+                'Owner State', 'Owner Zip', 'Offer Amount', 'County', 'Last Contact Date', 'Follow Up Needed', 'Follow Up Date', 'Follow Up Notes', 'Deal Stage'
             ];
 
             filteredLeads.forEach(lead => {
