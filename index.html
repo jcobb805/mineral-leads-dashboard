@@ -201,6 +201,11 @@
             line-height: 1.4;
         }
 
+        td.nma-col {
+            min-width: 70px;
+            text-align: center;
+        }
+
         tr:hover {
             background: #242424;
         }
@@ -848,6 +853,7 @@
                     let cellClass = '';
                     if (col === 'Owner Phone') cellClass = ' class="phone-col"';
                     else if (col === 'Owner Street Address') cellClass = ' class="address-col"';
+                    else if (col === 'NMA') cellClass = ' class="nma-col"';
 
                     if (col === 'Status') {
                         const currentStatus = localStatus || value;
