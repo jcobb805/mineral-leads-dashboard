@@ -888,10 +888,14 @@
             const today = new Date();
             const totalNMA = allLeads.reduce((sum, lead) => sum + (parseFloat(lead.NMA) || 0), 0);
             const initialCount = allLeads.filter(l => l['Deal Stage'] === 'Initial Outreach').length;
+
             const overdueCount = allLeads.filter(lead => {
-                if (!lead['Next Follow-Up Date']) return false;
-                const followUpDate = new Date(lead['Next Follow-Up Date']);
-                return followUpDate < today;
+                const ownerID = lead['Owner ID'] || lead['Owner Name'];
+                const localFollowUpDate = getLocalCellValue(ownerID, 'Follow Up Date');
+                const followUpDate = localFollowUpDate || lead['Follow Up Date'];
+                if (!followUpDate) return false;
+                const date = new Date(followUpDate);
+                return date < today;
             }).length;
 
             document.getElementById('stat-total').textContent = allLeads.length.toLocaleString();
@@ -1457,6 +1461,7 @@
                 const newValue = input.value.trim();
                 saveCellValue(ownerID, column, newValue);
                 renderGrid();
+                updateStats();
                 if (column === 'Deal Stage') {
                     renderKanban();
                 }
