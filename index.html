@@ -1030,6 +1030,7 @@
 
                 const item = document.createElement('div');
                 item.className = `calendar-item ${isOverdue ? 'overdue' : ''}`;
+                item.style.cursor = 'pointer';
                 item.innerHTML = `
                     <div class="calendar-date">${lead['Follow Up Date']} ${isOverdue ? '🔴 OVERDUE' : ''}</div>
                     <div class="calendar-name">${lead['Owner Name']}</div>
@@ -1037,6 +1038,7 @@
                     <div class="calendar-meta">${lead['Owner Phone'] ? lead['Owner Phone'].split('\n')[0] : 'No phone'}</div>
                     ${lead['Follow Up Notes'] ? `<div class="calendar-meta" style="margin-top:8px;color:#4a9eff;">📝 ${lead['Follow Up Notes']}</div>` : ''}
                 `;
+                item.onclick = () => showDetailModal(lead);
                 grid.appendChild(item);
             });
         }
