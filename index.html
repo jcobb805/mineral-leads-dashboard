@@ -921,16 +921,8 @@
                     else if (col === 'Legal Description') cellClass = ' class="legal-col"';
                     else if (col === 'NMA') cellClass = ' class="nma-col"';
 
-                    if (col === 'Status') {
-                        const currentStatus = localStatus || value;
-                        cellsHTML += `<td${cellClass}><select onchange="saveStatus('${ownerID.replace(/'/g, "\\'")}', this.value)" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #333;padding:4px;border-radius:4px;"><option value="">—</option><option value="Client" ${currentStatus === 'Client' ? 'selected' : ''}>Client</option><option value="Lead" ${currentStatus === 'Lead' ? 'selected' : ''}>Lead</option><option value="Dead" ${currentStatus === 'Dead' ? 'selected' : ''}>Dead</option><option value="Prospect" ${currentStatus === 'Prospect' ? 'selected' : ''}>Prospect</option></select></td>`;
-                    } else if (col === 'Deal Stage') {
-                        const currentDealStage = localDealStage || value;
-                        cellsHTML += `<td${cellClass}><select onchange="saveDealStage('${ownerID.replace(/'/g, "\\'")}', this.value)" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #333;padding:4px;border-radius:4px;"><option value="">—</option><option value="Lost" ${currentDealStage === 'Lost' ? 'selected' : ''}>Lost</option><option value="Proposal/Negotiations" ${currentDealStage === 'Proposal/Negotiations' ? 'selected' : ''}>Proposal/Negotiations</option><option value="Closed" ${currentDealStage === 'Closed' ? 'selected' : ''}>Closed</option></select></td>`;
-                    } else if (col !== 'Owner Name') {
-                        const isBlank = value === '—' || !value;
-                        const cellStyle = isBlank ? 'cursor:pointer;background:#1a1a1a;padding:4px;border-radius:2px;' : 'cursor:pointer;';
-                        cellsHTML += `<td${cellClass} class="editable-cell" data-owner-id="${ownerID}" data-column="${col}" style="${cellStyle}" title="Click to edit">${value}</td>`;
+                    if (col !== 'Owner Name') {
+                        cellsHTML += `<td${cellClass} class="editable-cell" data-owner-id="${ownerID}" data-column="${col}" style="cursor:pointer;" title="Click to edit">${value}</td>`;
                     } else {
                         cellsHTML += `<td${cellClass}>${value}</td>`;
                     }
