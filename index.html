@@ -971,20 +971,10 @@
             renderGrid();
         }
 
-        function syncScroll() {
-            const scrollbarTop = document.getElementById('scrollbarTop');
-            const tableWrapper = document.getElementById('tableWrapper');
-            scrollbarTop.scrollLeft = tableWrapper.scrollLeft;
-            tableWrapper.scrollLeft = scrollbarTop.scrollLeft;
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
             const scrollbarTop = document.getElementById('scrollbarTop');
             const tableWrapper = document.getElementById('tableWrapper');
             const innerDiv = scrollbarTop.querySelector('div');
-
-            scrollbarTop.addEventListener('scroll', syncScroll);
-            tableWrapper.addEventListener('scroll', syncScroll);
 
             setTimeout(() => {
                 innerDiv.style.width = tableWrapper.scrollWidth + 'px';
@@ -992,6 +982,11 @@
 
             tableWrapper.addEventListener('scroll', function() {
                 innerDiv.style.width = tableWrapper.scrollWidth + 'px';
+                scrollbarTop.scrollLeft = tableWrapper.scrollLeft;
+            });
+
+            scrollbarTop.addEventListener('scroll', function() {
+                tableWrapper.scrollLeft = scrollbarTop.scrollLeft;
             });
         });
 
