@@ -954,7 +954,7 @@
 
                 stageLeads.forEach(lead => {
                     html += `
-                        <div class="kanban-card">
+                        <div class="kanban-card" onclick="goToGridRow('${lead['Owner Name'].replace(/'/g, "\\'")}')" style="cursor: pointer;">
                             <div class="kanban-name">${lead['Owner Name']}</div>
                             <div class="kanban-meta">${lead['County Interest Held']}</div>
                             <div class="kanban-nma">${parseFloat(lead.NMA || 0).toFixed(2)} NMA</div>
@@ -1200,6 +1200,32 @@
 
             document.getElementById(tabName).classList.add('active');
             event.target.classList.add('active');
+        }
+
+        function goToGridRow(ownerName) {
+            // Switch to Grid tab
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('grid').classList.add('active');
+            document.querySelector('[onclick="switchTab(\'grid\')"]').classList.add('active');
+
+            // Clear search and render full grid
+            document.getElementById('searchBox').value = '';
+            filterGrid();
+
+            // Find and highlight the row
+            setTimeout(() => {
+                const rows = document.querySelectorAll('#leadsTable tbody tr');
+                rows.forEach(row => {
+                    if (row.textContent.includes(ownerName)) {
+                        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        row.style.background = '#2a2a2a';
+                        setTimeout(() => {
+                            row.style.background = '';
+                        }, 2000);
+                    }
+                });
+            }, 100);
         }
 
         // Local notes management (localStorage)
