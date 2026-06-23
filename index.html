@@ -206,6 +206,14 @@
             text-align: center;
         }
 
+        td.legal-col {
+            white-space: normal;
+            min-width: 150px;
+            max-width: 150px;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
         tr:hover {
             background: #242424;
         }
@@ -856,6 +864,7 @@
                     let cellClass = '';
                     if (col === 'Owner Phone') cellClass = ' class="phone-col"';
                     else if (col === 'Owner Street Address') cellClass = ' class="address-col"';
+                    else if (col === 'Legal Description') cellClass = ' class="legal-col"';
                     else if (col === 'NMA') cellClass = ' class="nma-col"';
 
                     if (col === 'Status') {
