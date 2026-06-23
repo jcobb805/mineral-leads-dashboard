@@ -980,11 +980,10 @@
             const search = document.getElementById('searchBox').value.toLowerCase();
 
             filteredLeads = allLeads.filter(lead => {
-                const matchSearch = !search ||
-                    (lead['Owner Name'] && lead['Owner Name'].toLowerCase().includes(search)) ||
-                    (lead['County Interest Held'] && lead['County Interest Held'].toLowerCase().includes(search)) ||
-                    (lead['County'] && lead['County'].toLowerCase().includes(search));
-                return matchSearch;
+                if (!search) return true;
+                return Object.values(lead).some(value =>
+                    value && value.toString().toLowerCase().includes(search)
+                );
             });
 
             renderGrid();
