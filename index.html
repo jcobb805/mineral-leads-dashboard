@@ -248,6 +248,14 @@
             line-height: 1.4;
         }
 
+        td.notes-col {
+            white-space: normal;
+            min-width: 80px;
+            max-width: 80px;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
         tr:hover {
             background: #242424;
         }
@@ -940,6 +948,7 @@
                     if (col === 'Owner Phone') classes = 'phone-col';
                     else if (col === 'Owner Street Address') classes = 'address-col';
                     else if (col === 'Legal Description') classes = 'legal-col';
+                    else if (col === 'Notes') classes = 'notes-col';
                     else if (col === 'NMA') classes = 'nma-col';
 
                     if (col === 'Owner Name' && isMultiCounty) {
