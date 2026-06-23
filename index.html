@@ -847,6 +847,9 @@
                 let cellsHTML = '';
                 columns.forEach(col => {
                     let value = lead[col] || '—';
+                    const localValue = getLocalCellValue(ownerID, col);
+                    if (localValue) value = localValue;
+
                     if (col === 'NMA' && !isNaN(value) && value !== '—') {
                         value = parseFloat(value).toFixed(2);
                     }
@@ -861,6 +864,10 @@
                     } else if (col === 'Deal Stage') {
                         const currentDealStage = localDealStage || value;
                         cellsHTML += `<td${cellClass}><select onchange="saveDealStage('${ownerID.replace(/'/g, "\\'")}', this.value)" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #333;padding:4px;border-radius:4px;"><option value="">—</option><option value="Lost" ${currentDealStage === 'Lost' ? 'selected' : ''}>Lost</option><option value="Proposal/Negotiations" ${currentDealStage === 'Proposal/Negotiations' ? 'selected' : ''}>Proposal/Negotiations</option><option value="Closed" ${currentDealStage === 'Closed' ? 'selected' : ''}>Closed</option></select></td>`;
+                    } else if (col !== 'Owner Name') {
+                        const isBlank = value === '—' || !value;
+                        const cellStyle = isBlank ? 'cursor:pointer;background:#1a1a1a;padding:4px;border-radius:2px;' : 'cursor:pointer;';
+                        cellsHTML += `<td${cellClass} onclick="makeEditable(this, '${ownerID.replace(/'/g, "\\'")}', '${col.replace(/'/g, "\\'")}', '${(value || '').replace(/'/g, "\\'")}')" style="${cellStyle}" title="Click to edit">${value}</td>`;
                     } else {
                         cellsHTML += `<td${cellClass}>${value}</td>`;
                     }
@@ -1186,6 +1193,43 @@
                 localStorage.removeItem(`dealStage_${ownerID}`);
             }
             renderGrid(); // Refresh to show updated deal stage
+        }
+
+        // Inline cell editing (localStorage)
+        function getLocalCellValue(ownerID, column) {
+            return localStorage.getItem(`cell_${ownerID}_${column}`) || '';
+        }
+
+        function saveCellValue(ownerID, column, value) {
+            if (value.trim()) {
+                localStorage.setItem(`cell_${ownerID}_${column}`, value);
+            } else {
+                localStorage.removeItem(`cell_${ownerID}_${column}`);
+            }
+        }
+
+        function makeEditable(cell, ownerID, column, currentValue) {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentValue === '—' ? '' : currentValue;
+            input.style.cssText = 'background:#1a1a1a;color:#e0e0e0;border:1px solid #4a9eff;padding:4px;width:100%;border-radius:2px;';
+
+            cell.innerHTML = '';
+            cell.appendChild(input);
+            input.focus();
+            input.select();
+
+            function saveEdit() {
+                const newValue = input.value.trim();
+                saveCellValue(ownerID, column, newValue);
+                renderGrid();
+            }
+
+            input.onblur = saveEdit;
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter') saveEdit();
+                if (e.key === 'Escape') renderGrid();
+            };
         }
 
         // Close modal when clicking outside
