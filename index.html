@@ -256,8 +256,7 @@
             line-height: 1.4;
         }
 
-        td.multi-county-owner::after {
-            content: '📍 Multi';
+        .multi-county-indicator {
             background: #4a9eff;
             color: #000;
             padding: 2px 6px;
@@ -970,11 +969,14 @@
                     else if (col === 'Notes') classes = 'notes-col';
                     else if (col === 'NMA') classes = 'nma-col';
 
-                    if (col === 'Owner Name' && isMultiCounty) {
-                        classes += (classes ? ' ' : '') + 'multi-county-owner';
-                    }
-
-                    if (col === 'Status') {
+                    if (col === 'Owner Name') {
+                        classes += (classes ? ' ' : '') + 'editable-cell';
+                        let ownerHTML = value;
+                        if (isMultiCounty) {
+                            ownerHTML += ` <span class="multi-county-indicator">📍 Multi</span>`;
+                        }
+                        cellsHTML += `<td class="${classes}" data-owner-id="${ownerID}" data-column="${col}" style="cursor:pointer;" title="Click to edit">${ownerHTML}</td>`;
+                    } else if (col === 'Status') {
                         const currentStatus = getLocalStatus(ownerID) || value;
                         cellsHTML += `<td class="${classes}"><select onchange="saveStatus('${ownerID.replace(/'/g, "\\'")}', this.value)" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #333;padding:4px;border-radius:4px;cursor:pointer;"><option value="">—</option><option value="Client" ${currentStatus === 'Client' ? 'selected' : ''}>Client</option><option value="Lead" ${currentStatus === 'Lead' ? 'selected' : ''}>Lead</option><option value="Dead" ${currentStatus === 'Dead' ? 'selected' : ''}>Dead</option><option value="Prospect" ${currentStatus === 'Prospect' ? 'selected' : ''}>Prospect</option></select></td>`;
                     } else if (col === 'Deal Stage') {
