@@ -236,6 +236,10 @@
             text-align: center;
         }
 
+        th.nma-col {
+            text-align: center;
+        }
+
         td.legal-col {
             white-space: normal;
             min-width: 150px;
@@ -637,7 +641,7 @@
                             <th onclick="sortTable('Owner Phone')">Phone</th>
                             <th onclick="sortTable('Email')">Email</th>
                             <th onclick="sortTable('Status')">Status</th>
-                            <th onclick="sortTable('NMA')">NMA</th>
+                            <th class="nma-col" onclick="sortTable('NMA')">NMA</th>
                             <th onclick="sortTable('Notes')">Notes</th>
                             <th onclick="sortTable('Legal Description')">Legal Description</th>
                             <th onclick="sortTable('Owner Street Address')">Street Address</th>
@@ -915,16 +919,16 @@
                     if (col === 'NMA' && !isNaN(value) && value !== '—') {
                         value = parseFloat(value).toFixed(2);
                     }
-                    let cellClass = '';
-                    if (col === 'Owner Phone') cellClass = ' class="phone-col"';
-                    else if (col === 'Owner Street Address') cellClass = ' class="address-col"';
-                    else if (col === 'Legal Description') cellClass = ' class="legal-col"';
-                    else if (col === 'NMA') cellClass = ' class="nma-col"';
+                    let classes = 'editable-cell';
+                    if (col === 'Owner Phone') classes += ' phone-col';
+                    else if (col === 'Owner Street Address') classes += ' address-col';
+                    else if (col === 'Legal Description') classes += ' legal-col';
+                    else if (col === 'NMA') classes += ' nma-col';
 
                     if (col !== 'Owner Name') {
-                        cellsHTML += `<td${cellClass} class="editable-cell" data-owner-id="${ownerID}" data-column="${col}" style="cursor:pointer;" title="Click to edit">${value}</td>`;
+                        cellsHTML += `<td class="${classes}" data-owner-id="${ownerID}" data-column="${col}" style="cursor:pointer;" title="Click to edit">${value}</td>`;
                     } else {
-                        cellsHTML += `<td${cellClass}>${value}</td>`;
+                        cellsHTML += `<td>${value}</td>`;
                     }
                 });
 
