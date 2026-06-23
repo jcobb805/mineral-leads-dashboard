@@ -931,7 +931,7 @@
 
         function renderKanban() {
             const board = document.getElementById('kanbanBoard');
-            const stages = ['Lost', 'Proposal/Negotiations', 'Closed', 'Unknown'];
+            const stages = ['Lost', 'Proposal/Negotiations', 'Closed', 'Awaiting Contact'];
 
             board.innerHTML = '';
 
@@ -943,7 +943,7 @@
                         ...lead,
                         'Deal Stage': localDealStage || lead['Deal Stage']
                     };
-                }).filter(l => l['Deal Stage'] === stage || (stage === 'Unknown' && !l['Deal Stage']));
+                }).filter(l => l['Deal Stage'] === stage || (stage === 'Awaiting Contact' && !l['Deal Stage']));
 
                 const totalNMA = stageLeads.reduce((sum, l) => sum + (parseFloat(l.NMA) || 0), 0);
 
