@@ -936,7 +936,15 @@
             board.innerHTML = '';
 
             stages.forEach(stage => {
-                const stageLeads = allLeads.filter(l => l['Deal Stage'] === stage || (stage === 'Unknown' && !l['Deal Stage']));
+                const stageLeads = allLeads.map(lead => {
+                    const ownerID = lead['Owner ID'] || lead['Owner Name'];
+                    const localDealStage = getLocalDealStage(ownerID);
+                    return {
+                        ...lead,
+                        'Deal Stage': localDealStage || lead['Deal Stage']
+                    };
+                }).filter(l => l['Deal Stage'] === stage || (stage === 'Unknown' && !l['Deal Stage']));
+
                 const totalNMA = stageLeads.reduce((sum, l) => sum + (parseFloat(l.NMA) || 0), 0);
 
                 const column = document.createElement('div');
