@@ -695,6 +695,17 @@
         </div>
     </div>
 
+    <!-- Detail Modal -->
+    <div id="detailModal" class="modal" style="display:none;z-index:1000;">
+        <div class="modal-content" style="max-width:600px;max-height:80vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <h2 id="detailName" style="margin:0;"></h2>
+                <button onclick="closeDetailModal()" style="background:none;border:none;color:#e0e0e0;font-size:24px;cursor:pointer;">×</button>
+            </div>
+            <div id="detailContent" style="display:grid;grid-template-columns:1fr 1fr;gap:15px;"></div>
+        </div>
+    </div>
+
     <!-- Notes Modal -->
     <div id="notesModal" class="modal">
         <div class="modal-content">
@@ -1203,29 +1214,40 @@
         }
 
         function goToGridRow(ownerName) {
-            // Switch to Grid tab
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('grid').classList.add('active');
-            document.querySelector('[onclick="switchTab(\'grid\')"]').classList.add('active');
+            // Find the lead and show detail modal
+            const lead = allLeads.find(l => l['Owner Name'] === ownerName);
+            if (lead) {
+                showDetailModal(lead);
+            }
+        }
 
-            // Clear search and render full grid
-            document.getElementById('searchBox').value = '';
-            filterGrid();
+        function showDetailModal(lead) {
+            const ownerID = lead['Owner ID'] || lead['Owner Name'];
+            const modal = document.getElementById('detailModal');
+            document.getElementById('detailName').textContent = lead['Owner Name'];
 
-            // Find and highlight the row
-            setTimeout(() => {
-                const rows = document.querySelectorAll('#leadsTable tbody tr');
-                rows.forEach(row => {
-                    if (row.textContent.includes(ownerName)) {
-                        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        row.style.background = '#2a2a2a';
-                        setTimeout(() => {
-                            row.style.background = '';
-                        }, 2000);
-                    }
-                });
-            }, 100);
+            let detailHTML = '';
+            const columns = [
+                'Owner Name', 'Main Contact', 'Owner Phone', 'Email', 'Status', 'NMA', 'Notes', 'Legal Description', 'Owner Street Address', 'Owner City',
+                'Owner State', 'Owner Zip', 'Offer Amount', 'County Interest Held', 'Last Contact Date', 'Follow Up Needed', 'Follow Up Date', 'Follow Up Notes', 'Deal Stage'
+            ];
+
+            columns.forEach(col => {
+                let value = lead[col] || getLocalCellValue(ownerID, col) || '—';
+                if (col === 'NMA' && !isNaN(value) && value !== '—') {
+                    value = parseFloat(value).toFixed(2);
+                }
+                detailHTML += `<div><strong>${col}:</strong></div><div style="word-break:break-word;">${value}</div>`;
+            });
+
+            document.getElementById('detailContent').innerHTML = detailHTML;
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').style.display = 'none';
         }
 
         // Local notes management (localStorage)
@@ -1333,9 +1355,13 @@
 
         // Close modal when clicking outside
         window.onclick = function(event) {
-            const modal = document.getElementById('notesModal');
-            if (event.target == modal) {
+            const notesModal = document.getElementById('notesModal');
+            if (event.target == notesModal) {
                 closeNotesModal();
+            }
+            const detailModal = document.getElementById('detailModal');
+            if (event.target == detailModal) {
+                closeDetailModal();
             }
         }
 
