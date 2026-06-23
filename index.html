@@ -1313,7 +1313,8 @@
             } else {
                 localStorage.removeItem(`dealStage_${ownerID}`);
             }
-            renderGrid(); // Refresh to show updated deal stage
+            renderGrid();
+            renderKanban();
         }
 
         // Inline cell editing (localStorage)
@@ -1344,6 +1345,9 @@
                 const newValue = input.value.trim();
                 saveCellValue(ownerID, column, newValue);
                 renderGrid();
+                if (column === 'Deal Stage') {
+                    renderKanban();
+                }
             }
 
             input.onblur = saveEdit;
