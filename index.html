@@ -616,7 +616,7 @@
                     <div class="stat-value" id="stat-nma">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Initial Outreach</div>
+                    <div class="stat-label">Prospect</div>
                     <div class="stat-value" id="stat-initial">0</div>
                 </div>
                 <div class="stat-card">
@@ -888,7 +888,11 @@
         function updateStats() {
             const today = new Date();
             const totalNMA = allLeads.reduce((sum, lead) => sum + (parseFloat(lead.NMA) || 0), 0);
-            const initialCount = allLeads.filter(l => l['Deal Stage'] === 'Initial Outreach').length;
+            const prospectCount = allLeads.filter(lead => {
+                const ownerID = lead['Owner ID'] || lead['Owner Name'];
+                const status = getLocalStatus(ownerID) || lead['Status'];
+                return status === 'Prospect';
+            }).length;
 
             const overdueCount = allLeads.filter(lead => {
                 const ownerID = lead['Owner ID'] || lead['Owner Name'];
@@ -901,7 +905,7 @@
 
             document.getElementById('stat-total').textContent = allLeads.length.toLocaleString();
             document.getElementById('stat-nma').textContent = totalNMA.toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-            document.getElementById('stat-initial').textContent = initialCount.toLocaleString();
+            document.getElementById('stat-initial').textContent = prospectCount.toLocaleString();
             document.getElementById('stat-overdue').textContent = overdueCount.toLocaleString();
         }
 
