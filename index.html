@@ -637,6 +637,10 @@
         <div id="grid" class="tab-content active">
             <div class="controls">
                 <input type="text" class="search-box" id="searchBox" placeholder="Search by name or county..." onkeyup="filterGrid()">
+                <label style="display:flex;align-items:center;gap:8px;margin-left:20px;font-size:14px;color:#e0e0e0;cursor:pointer;">
+                    <input type="checkbox" id="multiCountyFilter" onchange="filterGrid()" style="width:16px;height:16px;cursor:pointer;">
+                    Multi-County Leads Only
+                </label>
             </div>
             <div id="scrollbarTop" style="overflow-x: auto; overflow-y: hidden; height: 16px; background: #1a1a1a; border-radius: 8px 8px 0 0; border: 1px solid #333; border-bottom: none;">
                 <div style="width: 100%; height: 1px;"></div>
@@ -1207,8 +1211,26 @@
 
         function filterGrid() {
             const search = document.getElementById('searchBox').value.toLowerCase();
+            const multiCountyOnly = document.getElementById('multiCountyFilter').checked;
+
+            // Count how many counties each owner has
+            const ownerCounties = {};
+            allLeads.forEach(lead => {
+                const owner = lead['Owner Name'];
+                if (!ownerCounties[owner]) {
+                    ownerCounties[owner] = new Set();
+                }
+                if (lead['County Interest Held']) {
+                    ownerCounties[owner].add(lead['County Interest Held']);
+                }
+            });
 
             filteredLeads = allLeads.filter(lead => {
+                const owner = lead['Owner Name'];
+                const isMultiCounty = ownerCounties[owner] && ownerCounties[owner].size > 1;
+
+                if (multiCountyOnly && !isMultiCounty) return false;
+
                 if (!search) return true;
                 for (let key in lead) {
                     const value = lead[key];
