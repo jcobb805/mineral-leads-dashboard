@@ -992,9 +992,13 @@
 
             filteredLeads = allLeads.filter(lead => {
                 if (!search) return true;
-                return Object.values(lead).some(value =>
-                    value && value.toString().toLowerCase().includes(search)
-                );
+                for (let key in lead) {
+                    const value = lead[key];
+                    if (value && String(value).toLowerCase().includes(search)) {
+                        return true;
+                    }
+                }
+                return false;
             });
 
             renderGrid();
