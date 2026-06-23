@@ -185,6 +185,14 @@
             min-width: 130px;
         }
 
+        td.phone-col {
+            white-space: normal;
+            min-width: 90px;
+            max-width: 90px;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
         tr:hover {
             background: #242424;
         }
@@ -774,7 +782,8 @@
                     if (col === 'NMA' && !isNaN(value) && value !== '—') {
                         value = parseFloat(value).toFixed(2);
                     }
-                    cellsHTML += `<td>${value}</td>`;
+                    const isPhoneCol = col === 'Owner Phone' ? ' class="phone-col"' : '';
+                    cellsHTML += `<td${isPhoneCol}>${value}</td>`;
                 });
 
                 cellsHTML += `<td><button class="notes-btn" onclick="editNotes('${ownerID.replace(/'/g, "\\'")}', '${(lead['Owner Name'] || '').replace(/'/g, "\\'")}')">${localNotes ? '📝 ' + localNotes.substring(0, 20) + (localNotes.length > 20 ? '...' : '') : '+ Add Note'}</button></td>`;
