@@ -784,6 +784,7 @@
                 const ownerID = lead['Owner ID'] || lead['Owner Name'];
                 const localNotes = getLocalNotes(ownerID);
                 const localStatus = getLocalStatus(ownerID);
+                const localDealStage = getLocalDealStage(ownerID);
 
                 let cellsHTML = '';
                 columns.forEach(col => {
@@ -798,6 +799,9 @@
                     if (col === 'Status') {
                         const currentStatus = localStatus || value;
                         cellsHTML += `<td${cellClass}><select onchange="saveStatus('${ownerID.replace(/'/g, "\\'")}', this.value)" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #333;padding:4px;border-radius:4px;"><option value="">—</option><option value="Client" ${currentStatus === 'Client' ? 'selected' : ''}>Client</option><option value="Lead" ${currentStatus === 'Lead' ? 'selected' : ''}>Lead</option><option value="Dead" ${currentStatus === 'Dead' ? 'selected' : ''}>Dead</option><option value="Prospect" ${currentStatus === 'Prospect' ? 'selected' : ''}>Prospect</option></select></td>`;
+                    } else if (col === 'Deal Stage') {
+                        const currentDealStage = localDealStage || value;
+                        cellsHTML += `<td${cellClass}><select onchange="saveDealStage('${ownerID.replace(/'/g, "\\'")}', this.value)" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #333;padding:4px;border-radius:4px;"><option value="">—</option><option value="Lost" ${currentDealStage === 'Lost' ? 'selected' : ''}>Lost</option><option value="Proposal/Negotiations" ${currentDealStage === 'Proposal/Negotiations' ? 'selected' : ''}>Proposal/Negotiations</option><option value="Closed" ${currentDealStage === 'Closed' ? 'selected' : ''}>Closed</option></select></td>`;
                     } else {
                         cellsHTML += `<td${cellClass}>${value}</td>`;
                     }
@@ -1104,6 +1108,21 @@
                 localStorage.removeItem(`status_${ownerID}`);
             }
             renderGrid(); // Refresh to show updated status
+        }
+
+        // Deal Stage management (localStorage)
+        function getLocalDealStage(ownerID) {
+            const dealStage = localStorage.getItem(`dealStage_${ownerID}`);
+            return dealStage ? dealStage : '';
+        }
+
+        function saveDealStage(ownerID, dealStage) {
+            if (dealStage.trim()) {
+                localStorage.setItem(`dealStage_${ownerID}`, dealStage);
+            } else {
+                localStorage.removeItem(`dealStage_${ownerID}`);
+            }
+            renderGrid(); // Refresh to show updated deal stage
         }
 
         // Close modal when clicking outside
