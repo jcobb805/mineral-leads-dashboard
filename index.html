@@ -705,7 +705,7 @@
             if (!values || values.length < 2) return;
 
             const headers = values[0];
-            allLeads = values.slice(1).map(row => {
+            const allSheetLeads = values.slice(1).map(row => {
                 let obj = {};
                 headers.forEach((header, i) => {
                     obj[header] = row[i] || '';
@@ -713,7 +713,60 @@
                 return obj;
             }).filter(lead => lead['Owner Name']);
 
+            // Initial load: pull "With Wendy" leads
+            allLeads = allSheetLeads.filter(lead => lead['Recommended Next Action'] === 'With Wendy');
+
             initializeDashboard();
+
+            // Start recurring check for "Ready for Outreach" leads
+            startRecurringSync(allSheetLeads);
+        }
+
+        async function startRecurringSync(allSheetLeads) {
+            // Check every 5 minutes for "Ready for Outreach" leads
+            setInterval(async () => {
+                const readyLeads = allSheetLeads.filter(lead => lead['Recommended Next Action'] === 'Ready for Outreach');
+
+                for (let lead of readyLeads) {
+                    const alreadyExists = allLeads.some(l => l['Owner Name'] === lead['Owner Name']);
+                    if (!alreadyExists) {
+                        allLeads.push(lead);
+                        // Update Google Sheet to mark as "With Wendy"
+                        await updateGoogleSheetStatus(lead['Owner Name'], 'With Wendy');
+                    }
+                }
+
+                if (readyLeads.length > 0) {
+                    renderGrid();
+                }
+            }, 5 * 60 * 1000); // 5 minutes
+        }
+
+        async function updateGoogleSheetStatus(ownerName, newStatus) {
+            try {
+                const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}?key=${API_KEY}`);
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const values = data.values;
+                const headers = values[0];
+                const statusColIndex = headers.indexOf('Recommended Next Action');
+
+                for (let i = 1; i < values.length; i++) {
+                    if (values[i][0] === ownerName) {
+                        // Found the row, update status via batchUpdate
+                        const range = `${SHEET_NAME}!S${i + 1}`;
+                        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?key=${API_KEY}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ values: [[newStatus]] })
+                        });
+                        break;
+                    }
+                }
+            } catch (e) {
+                console.error('Error updating Google Sheet:', e);
+            }
         }
 
         async function loadEmbeddedData() {
