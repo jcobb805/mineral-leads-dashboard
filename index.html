@@ -962,7 +962,10 @@
                     else if (col === 'Notes') classes = 'notes-col';
                     else if (col === 'NMA') classes = 'nma-col';
 
-                    if (col === 'Status') {
+                    if (col === 'Owner Name' && isMultiCounty) {
+                        classes += (classes ? ' ' : '') + 'editable-cell';
+                        cellsHTML += `<td class="${classes}" data-owner-id="${ownerID}" data-column="${col}" style="cursor:pointer;display:flex;align-items:center;gap:8px;" title="Click to edit"><span>${value}</span><span style="background:#4a9eff;color:#000;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;">Multi-County</span></td>`;
+                    } else if (col === 'Status') {
                         const currentStatus = getLocalStatus(ownerID) || value;
                         cellsHTML += `<td class="${classes}"><select onchange="saveStatus('${ownerID.replace(/'/g, "\\'")}', this.value)" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #333;padding:4px;border-radius:4px;cursor:pointer;"><option value="">—</option><option value="Client" ${currentStatus === 'Client' ? 'selected' : ''}>Client</option><option value="Lead" ${currentStatus === 'Lead' ? 'selected' : ''}>Lead</option><option value="Dead" ${currentStatus === 'Dead' ? 'selected' : ''}>Dead</option><option value="Prospect" ${currentStatus === 'Prospect' ? 'selected' : ''}>Prospect</option></select></td>`;
                     } else if (col === 'Deal Stage') {
