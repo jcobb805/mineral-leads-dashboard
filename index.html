@@ -615,7 +615,7 @@
                     <div class="stat-label">Total NMA</div>
                     <div class="stat-value" id="stat-nma">0</div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" onclick="filterByProspect()" style="cursor:pointer;">
                     <div class="stat-label">Prospect</div>
                     <div class="stat-value" id="stat-initial">0</div>
                 </div>
@@ -1271,6 +1271,17 @@
 
         function filterCalendar() {
             renderCalendar();
+        }
+
+        function filterByProspect() {
+            filteredLeads = allLeads.filter(lead => {
+                const ownerID = lead['Owner ID'] || lead['Owner Name'];
+                const status = getLocalStatus(ownerID) || lead['Status'];
+                return status === 'Prospect';
+            });
+
+            switchTab('grid');
+            renderGrid();
         }
 
         function sortTable(column) {
