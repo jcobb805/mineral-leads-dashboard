@@ -695,6 +695,17 @@
         </div>
     </div>
 
+    <!-- Analytics Drill-Down Modal -->
+    <div id="analyticsModal" class="modal" style="display:none;z-index:1000;">
+        <div class="modal-content" style="max-width:500px;max-height:70vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <h2 id="analyticsTitle" style="margin:0;"></h2>
+                <button onclick="closeAnalyticsModal()" style="background:none;border:none;color:#e0e0e0;font-size:24px;cursor:pointer;">×</button>
+            </div>
+            <div id="analyticsListContent" style="display:flex;flex-direction:column;gap:10px;"></div>
+        </div>
+    </div>
+
     <!-- Detail Modal -->
     <div id="detailModal" class="modal" style="display:none;z-index:1000;">
         <div class="modal-content" style="max-width:600px;max-height:80vh;overflow-y:auto;">
@@ -1049,6 +1060,12 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const label = Object.keys(stages)[elements[0].index];
+                            showAnalyticsModal('Deal Stage', label, allLeads.filter(l => (l['Deal Stage'] || 'Unknown') === label));
+                        }
+                    },
                     plugins: {
                         legend: {
                             labels: { color: '#e0e0e0', font: { size: 12 } }
@@ -1117,6 +1134,12 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const county = topCounties[elements[0].index][0];
+                            showAnalyticsModal('County', county, allLeads.filter(l => (l['County Interest Held'] || 'Unknown') === county));
+                        }
+                    },
                     plugins: {
                         legend: {
                             labels: { color: '#e0e0e0', font: { size: 11 } }
@@ -1250,6 +1273,30 @@
             document.getElementById('detailModal').style.display = 'none';
         }
 
+        function showAnalyticsModal(category, value, leads) {
+            const modal = document.getElementById('analyticsModal');
+            document.getElementById('analyticsTitle').textContent = `${category}: ${value}`;
+
+            let listHTML = '';
+            leads.forEach(lead => {
+                listHTML += `
+                    <div onclick="showDetailModal(${JSON.stringify(lead).replace(/"/g, '&quot;')})" style="padding:10px;background:#1a1a1a;border-radius:4px;cursor:pointer;border:1px solid #333;hover:border-color:#4a9eff;">
+                        <div style="font-weight:600;">${lead['Owner Name']}</div>
+                        <div style="font-size:12px;color:#888;">${lead['County Interest Held']} | ${parseFloat(lead.NMA || 0).toFixed(2)} NMA</div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('analyticsListContent').innerHTML = listHTML || '<p>No leads found</p>';
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+        }
+
+        function closeAnalyticsModal() {
+            document.getElementById('analyticsModal').style.display = 'none';
+        }
+
         // Local notes management (localStorage)
         function getLocalNotes(ownerID) {
             const notes = localStorage.getItem(`notes_${ownerID}`);
@@ -1366,6 +1413,10 @@
             const detailModal = document.getElementById('detailModal');
             if (event.target == detailModal) {
                 closeDetailModal();
+            }
+            const analyticsModal = document.getElementById('analyticsModal');
+            if (event.target == analyticsModal) {
+                closeAnalyticsModal();
             }
         }
 
