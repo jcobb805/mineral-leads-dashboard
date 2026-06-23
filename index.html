@@ -944,8 +944,6 @@
                 'Owner State', 'Owner Zip', 'Offer Amount', 'County Interest Held', 'Last Contact Date', 'Follow Up Needed', 'Follow Up Date', 'Follow Up Notes', 'Deal Stage'
             ];
 
-            const badgedOwners = new Set();
-
             filteredLeads.forEach(lead => {
                 const row = document.createElement('tr');
                 const ownerID = lead['Owner ID'] || lead['Owner Name'];
@@ -972,9 +970,8 @@
                     else if (col === 'Notes') classes = 'notes-col';
                     else if (col === 'NMA') classes = 'nma-col';
 
-                    if (col === 'Owner Name' && isMultiCounty && !badgedOwners.has(lead['Owner Name'])) {
+                    if (col === 'Owner Name' && isMultiCounty) {
                         classes += (classes ? ' ' : '') + 'multi-county-owner';
-                        badgedOwners.add(lead['Owner Name']);
                     }
 
                     if (col === 'Status') {
