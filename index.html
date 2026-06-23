@@ -1100,6 +1100,12 @@
                     indexAxis: 'y',
                     responsive: true,
                     maintainAspectRatio: false,
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const county = topCounties[elements[0].index][0];
+                            showAnalyticsModal('County', county, allLeads.filter(l => (l['County Interest Held'] || 'Unknown') === county));
+                        }
+                    },
                     plugins: {
                         legend: { display: false }
                     },
