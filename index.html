@@ -628,6 +628,10 @@
         <div id="grid" class="tab-content active">
             <div class="controls">
                 <input type="text" class="search-box" id="searchBox" placeholder="Search by name or county..." onkeyup="filterGrid()">
+                <label style="display:flex;align-items:center;gap:8px;margin-left:20px;font-size:14px;color:#e0e0e0;cursor:pointer;">
+                    <input type="checkbox" id="multiCountyFilter" onchange="filterGrid()" style="width:16px;height:16px;cursor:pointer;">
+                    Multi-County Leads Only
+                </label>
             </div>
             <div id="scrollbarTop" style="overflow-x: auto; overflow-y: hidden; height: 16px; background: #1a1a1a; border-radius: 8px 8px 0 0; border: 1px solid #333; border-bottom: none;">
                 <div style="width: 100%; height: 1px;"></div>
@@ -898,6 +902,18 @@
                 return;
             }
 
+            // Count counties for each owner
+            const ownerCounties = {};
+            allLeads.forEach(lead => {
+                const owner = lead['Owner Name'];
+                if (!ownerCounties[owner]) {
+                    ownerCounties[owner] = new Set();
+                }
+                if (lead['County Interest Held']) {
+                    ownerCounties[owner].add(lead['County Interest Held']);
+                }
+            });
+
             const columns = [
                 'Owner Name', 'Main Contact', 'Owner Phone', 'Email', 'Status', 'NMA', 'Notes', 'Legal Description', 'Owner Street Address', 'Owner City',
                 'Owner State', 'Owner Zip', 'Offer Amount', 'County Interest Held', 'Last Contact Date', 'Follow Up Needed', 'Follow Up Date', 'Follow Up Notes', 'Deal Stage'
@@ -909,6 +925,7 @@
                 const localNotes = getLocalNotes(ownerID);
                 const localStatus = getLocalStatus(ownerID);
                 const localDealStage = getLocalDealStage(ownerID);
+                const isMultiCounty = ownerCounties[lead['Owner Name']] && ownerCounties[lead['Owner Name']].size > 1;
 
                 let cellsHTML = '';
                 columns.forEach(col => {
@@ -925,7 +942,10 @@
                     else if (col === 'Legal Description') classes = 'legal-col';
                     else if (col === 'NMA') classes = 'nma-col';
 
-                    if (col === 'Status') {
+                    if (col === 'Owner Name' && isMultiCounty) {
+                        const countyList = Array.from(ownerCounties[lead['Owner Name']]).sort().join(', ');
+                        cellsHTML += `<td class="${classes} editable-cell" data-owner-id="${ownerID}" data-column="${col}" style="cursor:pointer;" title="Click to edit"><span style="display:flex;align-items:center;gap:8px;"><span>${value}</span><span style="background:#4a9eff;color:#000;padding:2px 6px;border-radius:3px;font-size:11px;font-weight:600;white-space:nowrap;" title="${countyList}">📍 Multi</span></span></td>`;
+                    } else if (col === 'Status') {
                         const currentStatus = getLocalStatus(ownerID) || value;
                         cellsHTML += `<td class="${classes}"><select onchange="saveStatus('${ownerID.replace(/'/g, "\\'")}', this.value)" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #333;padding:4px;border-radius:4px;cursor:pointer;"><option value="">—</option><option value="Client" ${currentStatus === 'Client' ? 'selected' : ''}>Client</option><option value="Lead" ${currentStatus === 'Lead' ? 'selected' : ''}>Lead</option><option value="Dead" ${currentStatus === 'Dead' ? 'selected' : ''}>Dead</option><option value="Prospect" ${currentStatus === 'Prospect' ? 'selected' : ''}>Prospect</option></select></td>`;
                     } else if (col === 'Deal Stage') {
@@ -1178,8 +1198,26 @@
 
         function filterGrid() {
             const search = document.getElementById('searchBox').value.toLowerCase();
+            const multiCountyOnly = document.getElementById('multiCountyFilter').checked;
+
+            // Count how many counties each owner has
+            const ownerCounties = {};
+            allLeads.forEach(lead => {
+                const owner = lead['Owner Name'];
+                if (!ownerCounties[owner]) {
+                    ownerCounties[owner] = new Set();
+                }
+                if (lead['County Interest Held']) {
+                    ownerCounties[owner].add(lead['County Interest Held']);
+                }
+            });
 
             filteredLeads = allLeads.filter(lead => {
+                const owner = lead['Owner Name'];
+                const isMultiCounty = ownerCounties[owner] && ownerCounties[owner].size > 1;
+
+                if (multiCountyOnly && !isMultiCounty) return false;
+
                 if (!search) return true;
                 for (let key in lead) {
                     const value = lead[key];
