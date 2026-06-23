@@ -783,6 +783,7 @@
                 const row = document.createElement('tr');
                 const ownerID = lead['Owner ID'] || lead['Owner Name'];
                 const localNotes = getLocalNotes(ownerID);
+                const localStatus = getLocalStatus(ownerID);
 
                 let cellsHTML = '';
                 columns.forEach(col => {
@@ -793,7 +794,13 @@
                     let cellClass = '';
                     if (col === 'Owner Phone') cellClass = ' class="phone-col"';
                     else if (col === 'Owner Street Address') cellClass = ' class="address-col"';
-                    cellsHTML += `<td${cellClass}>${value}</td>`;
+
+                    if (col === 'Status') {
+                        const currentStatus = localStatus || value;
+                        cellsHTML += `<td${cellClass}><select onchange="saveStatus('${ownerID.replace(/'/g, "\\'")}', this.value)" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #333;padding:4px;border-radius:4px;"><option value="">—</option><option value="Client" ${currentStatus === 'Client' ? 'selected' : ''}>Client</option><option value="Lead" ${currentStatus === 'Lead' ? 'selected' : ''}>Lead</option><option value="Dead" ${currentStatus === 'Dead' ? 'selected' : ''}>Dead</option><option value="Prospect" ${currentStatus === 'Prospect' ? 'selected' : ''}>Prospect</option></select></td>`;
+                    } else {
+                        cellsHTML += `<td${cellClass}>${value}</td>`;
+                    }
                 });
 
                 cellsHTML += `<td><button class="notes-btn" onclick="editNotes('${ownerID.replace(/'/g, "\\'")}', '${(lead['Owner Name'] || '').replace(/'/g, "\\'")}')">${localNotes ? '📝 ' + localNotes.substring(0, 20) + (localNotes.length > 20 ? '...' : '') : '+ Add Note'}</button></td>`;
@@ -1082,6 +1089,21 @@
             saveLocalNotes(ownerID, notes);
             closeNotesModal();
             renderGrid(); // Refresh to show updated notes
+        }
+
+        // Status management (localStorage)
+        function getLocalStatus(ownerID) {
+            const status = localStorage.getItem(`status_${ownerID}`);
+            return status ? status : '';
+        }
+
+        function saveStatus(ownerID, status) {
+            if (status.trim()) {
+                localStorage.setItem(`status_${ownerID}`, status);
+            } else {
+                localStorage.removeItem(`status_${ownerID}`);
+            }
+            renderGrid(); // Refresh to show updated status
         }
 
         // Close modal when clicking outside
