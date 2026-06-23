@@ -1404,6 +1404,9 @@
                 if (column === 'Deal Stage') {
                     renderKanban();
                 }
+                if (column === 'Follow Up Date') {
+                    renderCalendar();
+                }
             }
 
             input.onblur = saveEdit;
