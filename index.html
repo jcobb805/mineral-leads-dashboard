@@ -963,8 +963,24 @@
 
         function renderCalendar() {
             const grid = document.getElementById('calendarGrid');
-            let leadsWithFollowUp = allLeads.filter(l => l['Next Follow-Up Date']);
-            leadsWithFollowUp.sort((a, b) => new Date(a['Next Follow-Up Date']) - new Date(b['Next Follow-Up Date']));
+
+            // Merge Google Sheet data with locally-edited follow-up dates
+            let leadsWithFollowUp = allLeads.map(lead => {
+                const ownerID = lead['Owner ID'] || lead['Owner Name'];
+                const localFollowUpDate = getLocalCellValue(ownerID, 'Follow Up Date');
+                const followUpDate = localFollowUpDate || lead['Follow Up Date'];
+
+                if (followUpDate) {
+                    return {
+                        ...lead,
+                        'Follow Up Date': followUpDate,
+                        'Follow Up Notes': getLocalCellValue(ownerID, 'Follow Up Notes') || lead['Follow Up Notes']
+                    };
+                }
+                return null;
+            }).filter(l => l);
+
+            leadsWithFollowUp.sort((a, b) => new Date(a['Follow Up Date']) - new Date(b['Follow Up Date']));
 
             if (leadsWithFollowUp.length === 0) {
                 grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No scheduled follow-ups</p></div>';
@@ -975,18 +991,18 @@
             grid.innerHTML = '';
 
             leadsWithFollowUp.forEach(lead => {
-                const followUpDate = new Date(lead['Next Follow-Up Date']);
+                const followUpDate = new Date(lead['Follow Up Date']);
                 const isOverdue = followUpDate < today;
                 const daysUntil = Math.ceil((followUpDate - today) / (1000 * 60 * 60 * 24));
 
                 const item = document.createElement('div');
                 item.className = `calendar-item ${isOverdue ? 'overdue' : ''}`;
                 item.innerHTML = `
-                    <div class="calendar-date">${lead['Next Follow-Up Date']} ${isOverdue ? '🔴 OVERDUE' : ''}</div>
+                    <div class="calendar-date">${lead['Follow Up Date']} ${isOverdue ? '🔴 OVERDUE' : ''}</div>
                     <div class="calendar-name">${lead['Owner Name']}</div>
                     <div class="calendar-meta">${lead['County Interest Held']}</div>
                     <div class="calendar-meta">${lead['Owner Phone'] ? lead['Owner Phone'].split('\n')[0] : 'No phone'}</div>
-                    ${lead['Follow-Up Notes'] ? `<div class="calendar-meta" style="margin-top:8px;color:#4a9eff;">📝 ${lead['Follow-Up Notes']}</div>` : ''}
+                    ${lead['Follow Up Notes'] ? `<div class="calendar-meta" style="margin-top:8px;color:#4a9eff;">📝 ${lead['Follow Up Notes']}</div>` : ''}
                 `;
                 grid.appendChild(item);
             });
