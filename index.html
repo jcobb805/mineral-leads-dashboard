@@ -970,6 +970,10 @@
                     } else if (col === 'Deal Stage') {
                         const currentDealStage = getLocalDealStage(ownerID) || value;
                         cellsHTML += `<td class="${classes}"><select onchange="saveDealStage('${ownerID.replace(/'/g, "\\'")}', this.value)" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #333;padding:4px;border-radius:4px;cursor:pointer;"><option value="">—</option><option value="Lost" ${currentDealStage === 'Lost' ? 'selected' : ''}>Lost</option><option value="Proposal/Negotiations" ${currentDealStage === 'Proposal/Negotiations' ? 'selected' : ''}>Proposal/Negotiations</option><option value="Closed" ${currentDealStage === 'Closed' ? 'selected' : ''}>Closed</option></select></td>`;
+                    } else if (col === 'Owner Phone' && value !== '—') {
+                        const phoneLink = value.replace(/[^\d+]/g, '');
+                        classes += (classes ? ' ' : '') + 'editable-cell';
+                        cellsHTML += `<td class="${classes}" data-owner-id="${ownerID}" data-column="${col}" style="cursor:pointer;" title="Click to edit"><a href="tel:${phoneLink}" onclick="event.stopPropagation();" style="color:#4a9eff;text-decoration:none;">${value}</a></td>`;
                     } else {
                         classes += (classes ? ' ' : '') + 'editable-cell';
                         cellsHTML += `<td class="${classes}" data-owner-id="${ownerID}" data-column="${col}" style="cursor:pointer;" title="Click to edit">${value}</td>`;
@@ -1344,7 +1348,12 @@
                 if (col === 'NMA' && !isNaN(value) && value !== '—') {
                     value = parseFloat(value).toFixed(2);
                 }
-                detailHTML += `<div><strong>${col}:</strong></div><div style="word-break:break-word;">${value}</div>`;
+                if (col === 'Owner Phone' && value !== '—') {
+                    const phoneLink = value.replace(/[^\d+]/g, '');
+                    detailHTML += `<div><strong>${col}:</strong></div><div style="word-break:break-word;"><a href="tel:${phoneLink}" style="color:#4a9eff;text-decoration:none;">${value}</a></div>`;
+                } else {
+                    detailHTML += `<div><strong>${col}:</strong></div><div style="word-break:break-word;">${value}</div>`;
+                }
             });
 
             document.getElementById('detailContent').innerHTML = detailHTML;
