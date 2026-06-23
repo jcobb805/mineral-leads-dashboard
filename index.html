@@ -867,7 +867,7 @@
                     } else if (col !== 'Owner Name') {
                         const isBlank = value === '—' || !value;
                         const cellStyle = isBlank ? 'cursor:pointer;background:#1a1a1a;padding:4px;border-radius:2px;' : 'cursor:pointer;';
-                        cellsHTML += `<td${cellClass} onclick="makeEditable(this, '${ownerID.replace(/'/g, "\\'")}', '${col.replace(/'/g, "\\'")}', '${(value || '').replace(/'/g, "\\'")}')" style="${cellStyle}" title="Click to edit">${value}</td>`;
+                        cellsHTML += `<td${cellClass} class="editable-cell" data-owner-id="${ownerID}" data-column="${col}" style="${cellStyle}" title="Click to edit">${value}</td>`;
                     } else {
                         cellsHTML += `<td${cellClass}>${value}</td>`;
                     }
@@ -877,6 +877,16 @@
 
                 row.innerHTML = cellsHTML;
                 tbody.appendChild(row);
+            });
+
+            // Attach click handlers to editable cells
+            document.querySelectorAll('.editable-cell').forEach(cell => {
+                cell.addEventListener('click', function() {
+                    const ownerID = this.getAttribute('data-owner-id');
+                    const column = this.getAttribute('data-column');
+                    const currentValue = this.textContent === '—' ? '' : this.textContent;
+                    makeEditable(this, ownerID, column, currentValue);
+                });
             });
         }
 
