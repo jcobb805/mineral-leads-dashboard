@@ -981,11 +981,15 @@
         document.addEventListener('DOMContentLoaded', function() {
             const scrollbarTop = document.getElementById('scrollbarTop');
             const tableWrapper = document.getElementById('tableWrapper');
+            const innerDiv = scrollbarTop.querySelector('div');
 
             scrollbarTop.addEventListener('scroll', syncScroll);
             tableWrapper.addEventListener('scroll', syncScroll);
 
-            const innerDiv = scrollbarTop.querySelector('div');
+            setTimeout(() => {
+                innerDiv.style.width = tableWrapper.scrollWidth + 'px';
+            }, 500);
+
             tableWrapper.addEventListener('scroll', function() {
                 innerDiv.style.width = tableWrapper.scrollWidth + 'px';
             });
