@@ -495,6 +495,86 @@
             transition: all 0.2s;
         }
 
+        .quick-filter-btn {
+            background: #1a1a1a;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            padding: 8px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .quick-filter-btn:hover {
+            border-color: #4a9eff;
+        }
+
+        .quick-filter-btn.active {
+            background: #4a9eff;
+            color: #000;
+            border-color: #4a9eff;
+            font-weight: 600;
+        }
+
+        .export-btn {
+            background: #1a5234;
+            color: #4ade80;
+            border: 1px solid #4ade80;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .export-btn:hover {
+            background: #1e6240;
+        }
+
+        .call-btn {
+            background: #4a9eff;
+            color: #000;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .call-btn:hover {
+            background: #6bb3ff;
+        }
+
+        .modal-input, .modal-select {
+            width: 100%;
+            padding: 10px 12px;
+            background: #252525;
+            border: 1px solid #333;
+            color: #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 14px;
+        }
+
+        .modal-input:focus, .modal-select:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
+        .modal-field-label {
+            display: block;
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 6px;
+        }
+
         .notes-btn:hover {
             background: #1e4a62;
             color: #6bb3ff;
@@ -615,11 +695,11 @@
                     <div class="stat-label">Total NMA</div>
                     <div class="stat-value" id="stat-nma">0</div>
                 </div>
-                <div class="stat-card" onclick="filterByProspect()" style="cursor:pointer;">
-                    <div class="stat-label">Prospect</div>
+                <div class="stat-card" onclick="filterByStatus('Negotiating')" style="cursor:pointer;">
+                    <div class="stat-label">Negotiating</div>
                     <div class="stat-value" id="stat-initial">0</div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" onclick="applyQuickFilter('overdue')" style="cursor:pointer;">
                     <div class="stat-label">Overdue Follow-Ups</div>
                     <div class="stat-value" id="stat-overdue">0</div>
                 </div>
@@ -637,10 +717,20 @@
         <div id="grid" class="tab-content active">
             <div class="controls">
                 <input type="text" class="search-box" id="searchBox" placeholder="Search by name or county..." onkeyup="filterGrid()">
-                <label style="display:flex;align-items:center;gap:8px;margin-left:20px;font-size:14px;color:#e0e0e0;cursor:pointer;">
+                <label style="display:flex;align-items:center;gap:8px;font-size:14px;color:#e0e0e0;cursor:pointer;">
                     <input type="checkbox" id="multiCountyFilter" onchange="filterGrid()" style="width:16px;height:16px;cursor:pointer;">
-                    Multi-County Leads Only
+                    Multi-County Only
                 </label>
+                <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
+            </div>
+            <div class="controls" style="margin-top:-8px;">
+                <span style="font-size:13px;color:#888;">Quick filters:</span>
+                <button class="quick-filter-btn" data-filter="awaiting" onclick="applyQuickFilter('awaiting')">Awaiting Contact</button>
+                <button class="quick-filter-btn" data-filter="overdue" onclick="applyQuickFilter('overdue')">Overdue Follow-ups</button>
+                <button class="quick-filter-btn" data-filter="highnma" onclick="applyQuickFilter('highnma')">High NMA (&gt;10)</button>
+                <select class="filter-select" id="quickCountyFilter" onchange="filterGrid()">
+                    <option value="">All Counties</option>
+                </select>
             </div>
             <div id="scrollbarTop" style="overflow-x: auto; overflow-y: hidden; height: 16px; background: #1a1a1a; border-radius: 8px 8px 0 0; border: 1px solid #333; border-bottom: none;">
                 <div style="width: 100%; height: 1px;"></div>
@@ -669,6 +759,7 @@
                             <th onclick="sortTable('Follow Up Notes')">Follow Up Notes</th>
                             <th onclick="sortTable('Deal Stage')">Deal Stage</th>
                             <th>My Notes</th>
+                            <th>Log Call</th>
                         </tr>
                     </thead>
                     <tbody id="gridBody">
@@ -748,11 +839,81 @@
         </div>
     </div>
 
+    <!-- Log a Call Modal -->
+    <div id="logCallModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">📞 Log a Call — <span id="logCallOwnerName"></span></div>
+
+            <label class="modal-field-label">Call Date</label>
+            <input type="date" id="logCallDate" class="modal-input">
+
+            <label class="modal-field-label">Outcome</label>
+            <select id="logCallOutcome" class="modal-select"></select>
+
+            <label class="modal-field-label">Notes — what happened on the call</label>
+            <textarea id="logCallNotes" class="modal-textarea" style="min-height:90px;" placeholder="e.g. Spoke with owner, wants to think it over."></textarea>
+
+            <label style="display:flex;align-items:center;gap:8px;font-size:14px;color:#e0e0e0;cursor:pointer;margin-bottom:14px;">
+                <input type="checkbox" id="logCallFollowUp" onchange="document.getElementById('logCallFollowUpDateWrap').style.display = this.checked ? 'block' : 'none';" style="width:16px;height:16px;cursor:pointer;">
+                Set a follow-up
+            </label>
+            <div id="logCallFollowUpDateWrap" style="display:none;">
+                <label class="modal-field-label">Follow-up Date</label>
+                <input type="date" id="logCallFollowUpDate" class="modal-input">
+            </div>
+
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="closeLogCall()">Cancel</button>
+                <button class="modal-btn modal-btn-save" onclick="submitLogCall()">Save Call</button>
+            </div>
+            <input type="hidden" id="logCallOwnerID">
+        </div>
+    </div>
+
     <script>
         let allLeads = [];
         let filteredLeads = [];
         let currentSort = { column: 'Owner Name', ascending: true };
         let stageChartInstance, countyChartInstance, topCountiesChartInstance;
+        let activeQuickFilter = null;
+
+        // Status options (Wendy's pipeline)
+        const STATUS_OPTIONS = ['New / Awaiting Contact', 'Contact Attempted', 'In Follow-up', 'Maybe / Warm', 'Negotiating', 'Closed – Bought', 'Lost'];
+        // Map legacy statuses to the new set so prior edits aren't lost
+        const STATUS_MIGRATION = { 'Prospect': 'Maybe / Warm', 'Lead': 'New / Awaiting Contact', 'Client': 'Closed – Bought', 'Dead': 'Lost' };
+
+        function normalizeStatus(s) {
+            if (!s) return '';
+            return STATUS_MIGRATION[s] || s;
+        }
+
+        function buildStatusOptions(current) {
+            let html = '<option value="">—</option>';
+            STATUS_OPTIONS.forEach(s => {
+                html += `<option value="${s}" ${current === s ? 'selected' : ''}>${s}</option>`;
+            });
+            return html;
+        }
+
+        // Call outcomes → optional auto status change
+        const CALL_OUTCOMES = [
+            { label: 'No answer / voicemail', status: null },
+            { label: 'Wrong number / bad contact info', status: null },
+            { label: 'Said No', status: 'Lost' },
+            { label: 'Maybe later', status: 'Maybe / Warm' },
+            { label: 'Negotiating', status: 'Negotiating' },
+            { label: 'Other', status: null }
+        ];
+
+        // Date helpers
+        function toMDY(d) {
+            return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear();
+        }
+        function toInputDate(d) {
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return d.getFullYear() + '-' + m + '-' + day;
+        }
         const SHEET_ID = '1XMUs-qCWV_cgP86J7l9xIXI8MHSB3HFajIsH8-3UEp8';
         const SHEET_NAME = 'Grants Title Review';
         const API_KEY = 'AIzaSyB1lb2tzx0J55ekT_CGC-xAxgS-oJNqU7E'; // Get this from Google Cloud Console
@@ -888,10 +1049,10 @@
         function updateStats() {
             const today = new Date();
             const totalNMA = allLeads.reduce((sum, lead) => sum + (parseFloat(lead.NMA) || 0), 0);
-            const prospectCount = allLeads.filter(lead => {
+            const negotiatingCount = allLeads.filter(lead => {
                 const ownerID = lead['Owner ID'] || lead['Owner Name'];
-                const status = getLocalStatus(ownerID) || lead['Status'];
-                return status === 'Prospect';
+                const status = normalizeStatus(getLocalStatus(ownerID) || lead['Status']);
+                return status === 'Negotiating';
             }).length;
 
             const overdueCount = allLeads.filter(lead => {
@@ -905,7 +1066,7 @@
 
             document.getElementById('stat-total').textContent = allLeads.length.toLocaleString();
             document.getElementById('stat-nma').textContent = totalNMA.toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-            document.getElementById('stat-initial').textContent = prospectCount.toLocaleString();
+            document.getElementById('stat-initial').textContent = negotiatingCount.toLocaleString();
             document.getElementById('stat-overdue').textContent = overdueCount.toLocaleString();
         }
 
@@ -915,7 +1076,7 @@
             tbody.innerHTML = '';
 
             if (filteredLeads.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="20" style="text-align:center;color:#666;padding:40px;">No leads match your filters</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="21" style="text-align:center;color:#666;padding:40px;">No leads match your filters</td></tr>`;
                 return;
             }
 
@@ -965,8 +1126,8 @@
                     if (col === 'Owner Name' && isMultiCounty) {
                         cellsHTML += `<td style="display:flex;align-items:center;gap:8px;"><span class="editable-cell" data-owner-id="${ownerID}" data-column="${col}" style="cursor:pointer;" title="Click to edit">${value}</span><span style="background:#4a9eff;color:#000;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;pointer-events:none;">Multi-County</span></td>`;
                     } else if (col === 'Status') {
-                        const currentStatus = getLocalStatus(ownerID) || value;
-                        cellsHTML += `<td class="${classes}"><select onchange="saveStatus('${ownerID.replace(/'/g, "\\'")}', this.value)" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #333;padding:4px;border-radius:4px;cursor:pointer;"><option value="">—</option><option value="Client" ${currentStatus === 'Client' ? 'selected' : ''}>Client</option><option value="Lead" ${currentStatus === 'Lead' ? 'selected' : ''}>Lead</option><option value="Dead" ${currentStatus === 'Dead' ? 'selected' : ''}>Dead</option><option value="Prospect" ${currentStatus === 'Prospect' ? 'selected' : ''}>Prospect</option></select></td>`;
+                        const currentStatus = normalizeStatus(getLocalStatus(ownerID) || value);
+                        cellsHTML += `<td class="${classes}"><select onchange="saveStatus('${ownerID.replace(/'/g, "\\'")}', this.value)" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #333;padding:4px;border-radius:4px;cursor:pointer;min-width:150px;">${buildStatusOptions(currentStatus)}</select></td>`;
                     } else if (col === 'Deal Stage') {
                         const currentDealStage = getLocalDealStage(ownerID) || value;
                         cellsHTML += `<td class="${classes}"><select onchange="saveDealStage('${ownerID.replace(/'/g, "\\'")}', this.value)" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #333;padding:4px;border-radius:4px;cursor:pointer;"><option value="">—</option><option value="Lost" ${currentDealStage === 'Lost' ? 'selected' : ''}>Lost</option><option value="Proposal/Negotiations" ${currentDealStage === 'Proposal/Negotiations' ? 'selected' : ''}>Proposal/Negotiations</option><option value="Closed" ${currentDealStage === 'Closed' ? 'selected' : ''}>Closed</option></select></td>`;
@@ -981,6 +1142,8 @@
                 });
 
                 cellsHTML += `<td><button class="notes-btn" onclick="editNotes('${ownerID.replace(/'/g, "\\'")}', '${(lead['Owner Name'] || '').replace(/'/g, "\\'")}')">${localNotes ? '📝 ' + localNotes.substring(0, 20) + (localNotes.length > 20 ? '...' : '') : '+ Add Note'}</button></td>`;
+
+                cellsHTML += `<td><button class="call-btn" onclick="openLogCall('${ownerID.replace(/'/g, "\\'")}', '${(lead['Owner Name'] || '').replace(/'/g, "\\'")}')">📞 Log Call</button></td>`;
 
                 row.innerHTML = cellsHTML;
                 tbody.appendChild(row);
@@ -1210,18 +1373,23 @@
 
         function populateCountyFilter() {
             const counties = [...new Set(allLeads.map(l => l['County Interest Held']).filter(Boolean))].sort();
-            const select = document.getElementById('countryFilter');
-            counties.forEach(county => {
-                const option = document.createElement('option');
-                option.value = county;
-                option.textContent = county;
-                select.appendChild(option);
+            ['countryFilter', 'quickCountyFilter'].forEach(id => {
+                const select = document.getElementById(id);
+                if (!select) return;
+                counties.forEach(county => {
+                    const option = document.createElement('option');
+                    option.value = county;
+                    option.textContent = county;
+                    select.appendChild(option);
+                });
             });
         }
 
         function filterGrid() {
             const search = document.getElementById('searchBox').value.toLowerCase();
             const multiCountyOnly = document.getElementById('multiCountyFilter').checked;
+            const countyFilter = document.getElementById('quickCountyFilter').value;
+            const today = new Date();
 
             // Count how many counties each owner has
             const ownerCounties = {};
@@ -1237,9 +1405,24 @@
 
             filteredLeads = allLeads.filter(lead => {
                 const owner = lead['Owner Name'];
+                const ownerID = lead['Owner ID'] || lead['Owner Name'];
                 const isMultiCounty = ownerCounties[owner] && ownerCounties[owner].size > 1;
 
                 if (multiCountyOnly && !isMultiCounty) return false;
+
+                if (countyFilter && lead['County Interest Held'] !== countyFilter) return false;
+
+                // Quick filter
+                if (activeQuickFilter === 'awaiting') {
+                    const status = normalizeStatus(getLocalStatus(ownerID) || lead['Status']);
+                    if (status !== 'New / Awaiting Contact') return false;
+                } else if (activeQuickFilter === 'overdue') {
+                    const followUpDate = getLocalCellValue(ownerID, 'Follow Up Date') || lead['Follow Up Date'];
+                    if (!followUpDate || new Date(followUpDate) >= today) return false;
+                } else if (activeQuickFilter === 'highnma') {
+                    const nma = parseFloat(getLocalCellValue(ownerID, 'NMA') || lead['NMA'] || 0);
+                    if (!(nma > 10)) return false;
+                }
 
                 if (!search) return true;
                 for (let key in lead) {
@@ -1252,6 +1435,54 @@
             });
 
             renderGrid();
+        }
+
+        function applyQuickFilter(name) {
+            // Toggle: clicking the active filter clears it
+            activeQuickFilter = (activeQuickFilter === name) ? null : name;
+            updateQuickFilterButtons();
+            switchTab('grid');
+            filterGrid();
+        }
+
+        function updateQuickFilterButtons() {
+            document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-filter') === activeQuickFilter);
+            });
+        }
+
+        function exportCSV() {
+            const exportColumns = [
+                'Owner Name', 'Main Contact', 'Owner Phone', 'Email', 'Status', 'NMA', 'Notes', 'Legal Description', 'Owner Street Address', 'Owner City',
+                'Owner State', 'Owner Zip', 'Offer Amount', 'County Interest Held', 'Last Contact Date', 'Follow Up Needed', 'Follow Up Date', 'Follow Up Notes', 'Deal Stage', 'My Notes'
+            ];
+
+            const esc = (v) => {
+                const s = (v === null || v === undefined) ? '' : String(v);
+                return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+            };
+
+            const rows = [exportColumns.map(esc).join(',')];
+            filteredLeads.forEach(lead => {
+                const ownerID = lead['Owner ID'] || lead['Owner Name'];
+                const cells = exportColumns.map(col => {
+                    if (col === 'My Notes') return esc(getLocalNotes(ownerID));
+                    if (col === 'Status') return esc(normalizeStatus(getLocalStatus(ownerID) || lead['Status']));
+                    if (col === 'Deal Stage') return esc(getLocalDealStage(ownerID) || lead['Deal Stage'] || '');
+                    return esc(getLocalCellValue(ownerID, col) || lead[col] || '');
+                });
+                rows.push(cells.join(','));
+            });
+
+            const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mineral-leads-export-${filteredLeads.length}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -1277,11 +1508,17 @@
             renderCalendar();
         }
 
-        function filterByProspect() {
+        function filterByStatus(targetStatus) {
+            // Clear search + quick filter so the status filter is unambiguous
+            document.getElementById('searchBox').value = '';
+            document.getElementById('multiCountyFilter').checked = false;
+            activeQuickFilter = null;
+            updateQuickFilterButtons();
+
             filteredLeads = allLeads.filter(lead => {
                 const ownerID = lead['Owner ID'] || lead['Owner Name'];
-                const status = getLocalStatus(ownerID) || lead['Status'];
-                return status === 'Prospect';
+                const status = normalizeStatus(getLocalStatus(ownerID) || lead['Status']);
+                return status === targetStatus;
             });
 
             switchTab('grid');
@@ -1321,7 +1558,12 @@
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
 
             document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
+            if (typeof event !== 'undefined' && event && event.target && event.target.classList.contains('tab-btn')) {
+                event.target.classList.add('active');
+            } else {
+                const btn = document.querySelector(`.tab-btn[onclick*="'${tabName}'"]`);
+                if (btn) btn.classList.add('active');
+            }
         }
 
         function goToGridRow(ownerName) {
@@ -1442,6 +1684,69 @@
             updateStats();
         }
 
+        // ---- Log a Call ----
+        function openLogCall(ownerID, ownerName) {
+            document.getElementById('logCallOwnerID').value = ownerID;
+            document.getElementById('logCallOwnerName').textContent = ownerName;
+            document.getElementById('logCallDate').value = toInputDate(new Date());
+            document.getElementById('logCallNotes').value = '';
+            document.getElementById('logCallFollowUp').checked = false;
+            document.getElementById('logCallFollowUpDateWrap').style.display = 'none';
+            document.getElementById('logCallFollowUpDate').value = '';
+
+            const outcomeSel = document.getElementById('logCallOutcome');
+            outcomeSel.innerHTML = CALL_OUTCOMES.map(o => `<option value="${o.label}">${o.label}</option>`).join('');
+
+            document.getElementById('logCallModal').classList.add('show');
+        }
+
+        function closeLogCall() {
+            document.getElementById('logCallModal').classList.remove('show');
+        }
+
+        function submitLogCall() {
+            const ownerID = document.getElementById('logCallOwnerID').value;
+            const dateVal = document.getElementById('logCallDate').value;
+            const outcome = document.getElementById('logCallOutcome').value;
+            const notes = document.getElementById('logCallNotes').value.trim();
+            const wantsFollowUp = document.getElementById('logCallFollowUp').checked;
+            const followUpVal = document.getElementById('logCallFollowUpDate').value;
+
+            // Call date → Last Contact Date (M/D/YYYY)
+            const callDate = dateVal ? toMDY(new Date(dateVal + 'T00:00:00')) : toMDY(new Date());
+            saveCellValue(ownerID, 'Last Contact Date', callDate);
+
+            // Append a timestamped entry to My Notes (call history)
+            const existingNotes = getLocalNotes(ownerID);
+            let entry = `[${callDate}] ${outcome}`;
+            if (notes) entry += ` — ${notes}`;
+            const combined = existingNotes ? existingNotes + '\n' + entry : entry;
+            saveLocalNotes(ownerID, combined);
+
+            // Outcome → auto status change
+            const outcomeDef = CALL_OUTCOMES.find(o => o.label === outcome);
+            let newStatus = outcomeDef && outcomeDef.status ? outcomeDef.status : null;
+
+            // Follow-up handling
+            if (wantsFollowUp && followUpVal) {
+                const fuDate = toMDY(new Date(followUpVal + 'T00:00:00'));
+                saveCellValue(ownerID, 'Follow Up Date', fuDate);
+                saveCellValue(ownerID, 'Follow Up Needed', 'Yes');
+                if (notes) saveCellValue(ownerID, 'Follow Up Notes', notes);
+                // A scheduled follow-up moves the lead into the follow-up pipeline
+                if (!newStatus) newStatus = 'In Follow-up';
+            }
+
+            if (newStatus) {
+                localStorage.setItem(`status_${ownerID}`, newStatus);
+            }
+
+            closeLogCall();
+            renderGrid();
+            renderCalendar();
+            updateStats();
+        }
+
         // Deal Stage management (localStorage)
         function getLocalDealStage(ownerID) {
             const dealStage = localStorage.getItem(`dealStage_${ownerID}`);
@@ -1515,6 +1820,10 @@
             const analyticsModal = document.getElementById('analyticsModal');
             if (event.target == analyticsModal) {
                 closeAnalyticsModal();
+            }
+            const logCallModal = document.getElementById('logCallModal');
+            if (event.target == logCallModal) {
+                closeLogCall();
             }
         }
 
