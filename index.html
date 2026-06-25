@@ -798,7 +798,7 @@
         <div id="analytics" class="tab-content">
             <div class="charts-grid">
                 <div class="chart-container">
-                    <div class="chart-title">Leads by Deal Stage</div>
+                    <div class="chart-title">Leads by Status</div>
                     <canvas id="stageChart"></canvas>
                 </div>
                 <div class="chart-container">
@@ -1173,19 +1173,13 @@
 
         function renderKanban() {
             const board = document.getElementById('kanbanBoard');
-            const stages = ['Lost', 'Proposal/Negotiations', 'Closed', 'Awaiting Contact'];
+            // Kanban columns mirror Wendy's Status pipeline
+            const stages = STATUS_OPTIONS;
 
             board.innerHTML = '';
 
             stages.forEach(stage => {
-                const stageLeads = allLeads.map(lead => {
-                    const ownerID = lead['Owner ID'] || lead['Owner Name'];
-                    const localDealStage = getLocalDealStage(ownerID);
-                    return {
-                        ...lead,
-                        'Deal Stage': localDealStage || lead['Deal Stage']
-                    };
-                }).filter(l => l['Deal Stage'] === stage || (stage === 'Awaiting Contact' && !l['Deal Stage']));
+                const stageLeads = allLeads.filter(lead => getEffectiveStatus(lead) === stage);
 
                 const totalNMA = stageLeads.reduce((sum, l) => sum + (parseFloat(l.NMA) || 0), 0);
 
@@ -1195,12 +1189,14 @@
                 let html = `<div class="kanban-header">${stage}<span class="kanban-count">${stageLeads.length}</span></div><div class="kanban-cards">`;
 
                 stageLeads.forEach(lead => {
+                    const ownerID = lead['Owner ID'] || lead['Owner Name'];
+                    const lastContact = getLocalCellValue(ownerID, 'Last Contact Date') || lead['Last Contact Date'];
                     html += `
                         <div class="kanban-card" onclick="goToGridRow('${lead['Owner Name'].replace(/'/g, "\\'")}')" style="cursor: pointer;">
                             <div class="kanban-name">${lead['Owner Name']}</div>
-                            <div class="kanban-meta">${lead['County Interest Held']}</div>
+                            <div class="kanban-meta">${lead['County Interest Held'] || ''}</div>
                             <div class="kanban-nma">${parseFloat(lead.NMA || 0).toFixed(2)} NMA</div>
-                            <div class="kanban-meta">${lead['Last Contact Date'] ? `Last: ${lead['Last Contact Date']}` : 'Never contacted'}</div>
+                            <div class="kanban-meta">${lastContact ? `Last: ${lastContact}` : 'Never contacted'}</div>
                         </div>
                     `;
                 });
@@ -1266,12 +1262,15 @@
             if (countyChartInstance) countyChartInstance.destroy();
             if (topCountiesChartInstance) topCountiesChartInstance.destroy();
 
-            // Stage Chart
+            // Status Chart (Wendy's pipeline)
             const stages = {};
+            STATUS_OPTIONS.forEach(s => { stages[s] = 0; });
             allLeads.forEach(lead => {
-                const stage = lead['Deal Stage'] || 'Unknown';
+                const stage = getEffectiveStatus(lead);
                 stages[stage] = (stages[stage] || 0) + 1;
             });
+            // Drop empty buckets so the chart isn't cluttered
+            Object.keys(stages).forEach(k => { if (stages[k] === 0) delete stages[k]; });
 
             stageChartInstance = new Chart(document.getElementById('stageChart'), {
                 type: 'doughnut',
@@ -1279,7 +1278,7 @@
                     labels: Object.keys(stages),
                     datasets: [{
                         data: Object.values(stages),
-                        backgroundColor: ['#60a5fa', '#fca5a5', '#fed7aa', '#a0a0a0'],
+                        backgroundColor: ['#60a5fa', '#fbbf24', '#34d399', '#a78bfa', '#f97316', '#22c55e', '#f87171'],
                         borderColor: '#1a1a1a',
                         borderWidth: 2
                     }]
@@ -1290,7 +1289,7 @@
                     onClick: (event, elements) => {
                         if (elements.length > 0) {
                             const label = Object.keys(stages)[elements[0].index];
-                            showAnalyticsModal('Deal Stage', label, allLeads.filter(l => (l['Deal Stage'] || 'Unknown') === label));
+                            showAnalyticsModal('Status', label, allLeads.filter(l => getEffectiveStatus(l) === label));
                         }
                     },
                     plugins: {
@@ -1690,6 +1689,8 @@
                 localStorage.removeItem(`status_${ownerID}`);
             }
             renderGrid(); // Refresh to show updated status
+            renderKanban();
+            renderAnalytics();
             updateStats();
         }
 
@@ -1753,6 +1754,8 @@
             closeLogCall();
             renderGrid();
             renderCalendar();
+            renderKanban();
+            renderAnalytics();
             updateStats();
         }
 
