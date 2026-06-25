@@ -185,7 +185,8 @@
             min-width: 130px;
         }
 
-        td:nth-child(1), td:nth-child(2), td:nth-child(3) {
+        /* Frozen left columns: Log Call (1), Owner Name (2), Main Contact (3), Phone (4) */
+        td:nth-child(1), td:nth-child(2), td:nth-child(3), td:nth-child(4) {
             position: sticky;
             left: 0;
             background: #0f0f0f;
@@ -200,7 +201,11 @@
             left: 260px;
         }
 
-        th:nth-child(1), th:nth-child(2), th:nth-child(3) {
+        td:nth-child(4) {
+            left: 390px;
+        }
+
+        th:nth-child(1), th:nth-child(2), th:nth-child(3), th:nth-child(4) {
             position: sticky;
             left: 0;
             background: #252525;
@@ -213,6 +218,10 @@
 
         th:nth-child(3) {
             left: 260px;
+        }
+
+        th:nth-child(4) {
+            left: 390px;
         }
 
         td.phone-col {
@@ -739,6 +748,7 @@
                 <table id="leadsTable">
                     <thead id="tableHead">
                         <tr id="headerRow">
+                            <th>Log Call</th>
                             <th onclick="sortTable('Owner Name')">Owner Name</th>
                             <th onclick="sortTable('Main Contact')">Main Contact</th>
                             <th onclick="sortTable('Owner Phone')">Phone</th>
@@ -759,7 +769,6 @@
                             <th onclick="sortTable('Follow Up Notes')">Follow Up Notes</th>
                             <th onclick="sortTable('Deal Stage')">Deal Stage</th>
                             <th>My Notes</th>
-                            <th>Log Call</th>
                         </tr>
                     </thead>
                     <tbody id="gridBody">
@@ -893,6 +902,13 @@
                 html += `<option value="${s}" ${current === s ? 'selected' : ''}>${s}</option>`;
             });
             return html;
+        }
+
+        // Effective status: local edit > sheet value > default for new imports
+        function getEffectiveStatus(lead) {
+            const ownerID = lead['Owner ID'] || lead['Owner Name'];
+            const raw = normalizeStatus(getLocalStatus(ownerID) || lead['Status']);
+            return raw || 'New / Awaiting Contact';
         }
 
         // Call outcomes → optional auto status change
@@ -1049,11 +1065,7 @@
         function updateStats() {
             const today = new Date();
             const totalNMA = allLeads.reduce((sum, lead) => sum + (parseFloat(lead.NMA) || 0), 0);
-            const negotiatingCount = allLeads.filter(lead => {
-                const ownerID = lead['Owner ID'] || lead['Owner Name'];
-                const status = normalizeStatus(getLocalStatus(ownerID) || lead['Status']);
-                return status === 'Negotiating';
-            }).length;
+            const negotiatingCount = allLeads.filter(lead => getEffectiveStatus(lead) === 'Negotiating').length;
 
             const overdueCount = allLeads.filter(lead => {
                 const ownerID = lead['Owner ID'] || lead['Owner Name'];
@@ -1106,7 +1118,8 @@
                 const isMultiCounty = ownerCounties[lead['Owner Name']] && ownerCounties[lead['Owner Name']].size > 1;
                 const countyList = isMultiCounty ? Array.from(ownerCounties[lead['Owner Name']]).sort().join(', ') : '';
 
-                let cellsHTML = '';
+                // Log Call is the first (frozen) column
+                let cellsHTML = `<td><button class="call-btn" onclick="openLogCall('${ownerID.replace(/'/g, "\\'")}', '${(lead['Owner Name'] || '').replace(/'/g, "\\'")}')">📞 Log Call</button></td>`;
                 columns.forEach(col => {
                     let value = lead[col] || '—';
                     const localValue = getLocalCellValue(ownerID, col);
@@ -1126,7 +1139,7 @@
                     if (col === 'Owner Name' && isMultiCounty) {
                         cellsHTML += `<td style="display:flex;align-items:center;gap:8px;"><span class="editable-cell" data-owner-id="${ownerID}" data-column="${col}" style="cursor:pointer;" title="Click to edit">${value}</span><span style="background:#4a9eff;color:#000;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;pointer-events:none;">Multi-County</span></td>`;
                     } else if (col === 'Status') {
-                        const currentStatus = normalizeStatus(getLocalStatus(ownerID) || value);
+                        const currentStatus = getEffectiveStatus(lead);
                         cellsHTML += `<td class="${classes}"><select onchange="saveStatus('${ownerID.replace(/'/g, "\\'")}', this.value)" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #333;padding:4px;border-radius:4px;cursor:pointer;min-width:150px;">${buildStatusOptions(currentStatus)}</select></td>`;
                     } else if (col === 'Deal Stage') {
                         const currentDealStage = getLocalDealStage(ownerID) || value;
@@ -1142,8 +1155,6 @@
                 });
 
                 cellsHTML += `<td><button class="notes-btn" onclick="editNotes('${ownerID.replace(/'/g, "\\'")}', '${(lead['Owner Name'] || '').replace(/'/g, "\\'")}')">${localNotes ? '📝 ' + localNotes.substring(0, 20) + (localNotes.length > 20 ? '...' : '') : '+ Add Note'}</button></td>`;
-
-                cellsHTML += `<td><button class="call-btn" onclick="openLogCall('${ownerID.replace(/'/g, "\\'")}', '${(lead['Owner Name'] || '').replace(/'/g, "\\'")}')">📞 Log Call</button></td>`;
 
                 row.innerHTML = cellsHTML;
                 tbody.appendChild(row);
@@ -1414,8 +1425,7 @@
 
                 // Quick filter
                 if (activeQuickFilter === 'awaiting') {
-                    const status = normalizeStatus(getLocalStatus(ownerID) || lead['Status']);
-                    if (status !== 'New / Awaiting Contact') return false;
+                    if (getEffectiveStatus(lead) !== 'New / Awaiting Contact') return false;
                 } else if (activeQuickFilter === 'overdue') {
                     const followUpDate = getLocalCellValue(ownerID, 'Follow Up Date') || lead['Follow Up Date'];
                     if (!followUpDate || new Date(followUpDate) >= today) return false;
@@ -1467,7 +1477,7 @@
                 const ownerID = lead['Owner ID'] || lead['Owner Name'];
                 const cells = exportColumns.map(col => {
                     if (col === 'My Notes') return esc(getLocalNotes(ownerID));
-                    if (col === 'Status') return esc(normalizeStatus(getLocalStatus(ownerID) || lead['Status']));
+                    if (col === 'Status') return esc(getEffectiveStatus(lead));
                     if (col === 'Deal Stage') return esc(getLocalDealStage(ownerID) || lead['Deal Stage'] || '');
                     return esc(getLocalCellValue(ownerID, col) || lead[col] || '');
                 });
@@ -1515,11 +1525,7 @@
             activeQuickFilter = null;
             updateQuickFilterButtons();
 
-            filteredLeads = allLeads.filter(lead => {
-                const ownerID = lead['Owner ID'] || lead['Owner Name'];
-                const status = normalizeStatus(getLocalStatus(ownerID) || lead['Status']);
-                return status === targetStatus;
-            });
+            filteredLeads = allLeads.filter(lead => getEffectiveStatus(lead) === targetStatus);
 
             switchTab('grid');
             renderGrid();
@@ -1586,9 +1592,12 @@
             ];
 
             columns.forEach(col => {
-                let value = lead[col] || getLocalCellValue(ownerID, col) || '—';
+                let value = getLocalCellValue(ownerID, col) || lead[col] || '—';
                 if (col === 'NMA' && !isNaN(value) && value !== '—') {
                     value = parseFloat(value).toFixed(2);
+                }
+                if (col === 'Status') {
+                    value = getEffectiveStatus(lead);
                 }
                 if (col === 'Owner Phone' && value !== '—') {
                     const phoneLink = value.replace(/[^\d+]/g, '');
