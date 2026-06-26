@@ -935,6 +935,29 @@
             if (ds) localStorage.setItem(`dealStage_${ownerID}`, ds);
         }
 
+        function attrEsc(s) {
+            return String(s == null ? '' : s).replace(/"/g, '&quot;');
+        }
+
+        // Build a pre-filled SMS link (uses the device's own number to send)
+        function buildSmsHref(lead) {
+            const ownerID = lead['Owner ID'] || lead['Owner Name'];
+            const phoneRaw = (getLocalCellValue(ownerID, 'Owner Phone') || lead['Owner Phone'] || '').split('\n')[0].replace(/[^\d+]/g, '');
+            const county = lead['County Interest Held'] ? ` you own in ${lead['County Interest Held']}` : '';
+            const body = `Hello, this is Wendy Hinkle reaching out regarding the mineral interest${county}. I'd love to connect when you have a moment. Thank you!`;
+            return `sms:${phoneRaw}?&body=${encodeURIComponent(body)}`;
+        }
+
+        // Save an edit made from the detail popup
+        function saveDetailField(ownerID, column, value) {
+            saveCellValue(ownerID, column, value);
+            renderGrid();
+            renderKanban();
+            renderAnalytics();
+            renderCalendar();
+            updateStats();
+        }
+
         // Call outcomes → optional auto status change
         const CALL_OUTCOMES = [
             { label: 'No answer / voicemail', status: null },
@@ -1657,32 +1680,42 @@
 
         function showDetailModal(lead) {
             const ownerID = lead['Owner ID'] || lead['Owner Name'];
+            const escId = ownerID.replace(/'/g, "\\'");
             const modal = document.getElementById('detailModal');
             document.getElementById('detailName').textContent = lead['Owner Name'];
 
-            let detailHTML = '';
             const columns = [
                 'Owner Name', 'Main Contact', 'Owner Phone', 'Email', 'Status', 'NMA', 'Notes', 'Legal Description', 'Owner Street Address', 'Owner City',
                 'Owner State', 'Owner Zip', 'Offer Amount', 'County Interest Held', 'Last Contact Date', 'Follow Up Needed', 'Follow Up Date', 'Follow Up Notes', 'Deal Stage'
             ];
 
+            const inputStyle = 'width:100%;padding:6px 8px;background:#252525;border:1px solid #333;color:#e0e0e0;border-radius:4px;font-size:13px;';
+
+            // Call + Text action buttons
+            const phoneRaw = (getLocalCellValue(ownerID, 'Owner Phone') || lead['Owner Phone'] || '').split('\n')[0].replace(/[^\d+]/g, '');
+            let actionsHTML = '<div style="grid-column:1 / -1;display:flex;gap:10px;margin-bottom:6px;">';
+            if (phoneRaw) {
+                actionsHTML += `<a class="call-btn" href="tel:${phoneRaw}" style="text-decoration:none;">📞 Call</a>`;
+                actionsHTML += `<a class="call-btn" href="${attrEsc(buildSmsHref(lead))}" style="text-decoration:none;background:#1a5234;color:#4ade80;">💬 Text</a>`;
+            }
+            actionsHTML += '</div>';
+
+            let detailHTML = actionsHTML;
+
             columns.forEach(col => {
-                let value = getLocalCellValue(ownerID, col) || lead[col] || '—';
-                if (col === 'NMA' && !isNaN(value) && value !== '—') {
-                    value = parseFloat(value).toFixed(2);
-                }
+                let control;
                 if (col === 'Status') {
-                    value = getEffectiveStatus(lead);
-                }
-                if (col === 'Offer Amount' && value !== '—' && !isNaN(parseFloat(String(value).replace(/[$,]/g, '')))) {
-                    value = formatCurrency(value);
-                }
-                if (col === 'Owner Phone' && value !== '—') {
-                    const phoneLink = value.replace(/[^\d+]/g, '');
-                    detailHTML += `<div><strong>${col}:</strong></div><div style="word-break:break-word;"><a href="tel:${phoneLink}" style="color:#4a9eff;text-decoration:none;">${value}</a></div>`;
+                    control = `<select onchange="saveStatus('${escId}', this.value)" style="${inputStyle}cursor:pointer;">${buildStatusOptions(getEffectiveStatus(lead))}</select>`;
+                } else if (col === 'Deal Stage') {
+                    const ds = getLocalDealStage(ownerID) || lead['Deal Stage'] || '';
+                    control = `<select onchange="saveDealStage('${escId}', this.value)" style="${inputStyle}cursor:pointer;"><option value="">—</option>` +
+                        ['Lost', 'Proposal/Negotiations', 'Closed'].map(o => `<option value="${o}" ${ds === o ? 'selected' : ''}>${o}</option>`).join('') + `</select>`;
                 } else {
-                    detailHTML += `<div><strong>${col}:</strong></div><div style="word-break:break-word;">${value}</div>`;
+                    let raw = getLocalCellValue(ownerID, col) || lead[col] || '';
+                    if (col === 'Offer Amount') raw = String(raw).replace(/[$,]/g, '');
+                    control = `<input type="text" value="${attrEsc(raw)}" onchange="saveDetailField('${escId}', '${col}', this.value)" style="${inputStyle}">`;
                 }
+                detailHTML += `<div style="display:flex;align-items:center;"><strong style="font-size:12px;color:#888;">${col}</strong></div><div>${control}</div>`;
             });
 
             document.getElementById('detailContent').innerHTML = detailHTML;
@@ -1880,6 +1913,8 @@
             input.focus();
             input.select();
 
+            let advancing = false;
+
             function saveEdit() {
                 const newValue = input.value.trim();
                 saveCellValue(ownerID, column, newValue);
@@ -1893,10 +1928,22 @@
                 }
             }
 
-            input.onblur = saveEdit;
+            function saveAndAdvance(goBack) {
+                advancing = true; // prevent onblur from double-saving
+                saveEdit();
+                // After re-render, hop to the next/prev editable cell in the same row
+                const rowCells = [...document.querySelectorAll('#gridBody .editable-cell')]
+                    .filter(c => c.getAttribute('data-owner-id') === ownerID);
+                const idx = rowCells.findIndex(c => c.getAttribute('data-column') === column);
+                const target = rowCells[goBack ? idx - 1 : idx + 1];
+                if (target) target.click();
+            }
+
+            input.onblur = () => { if (!advancing) saveEdit(); };
             input.onkeydown = (e) => {
-                if (e.key === 'Enter') saveEdit();
-                if (e.key === 'Escape') renderGrid();
+                if (e.key === 'Enter') { saveEdit(); }
+                else if (e.key === 'Escape') { renderGrid(); }
+                else if (e.key === 'Tab') { e.preventDefault(); saveAndAdvance(e.shiftKey); }
             };
         }
 
