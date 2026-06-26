@@ -786,6 +786,9 @@
         <!-- Calendar View -->
         <div id="calendar" class="tab-content">
             <div class="controls">
+                <button class="quick-filter-btn active" data-fufilter="all" onclick="applyFollowUpFilter('all')">All</button>
+                <button class="quick-filter-btn" data-fufilter="overdue" onclick="applyFollowUpFilter('overdue')">Overdue</button>
+                <button class="quick-filter-btn" data-fufilter="upcoming" onclick="applyFollowUpFilter('upcoming')">Next 7 Days</button>
                 <select class="filter-select" id="countryFilter" onchange="filterCalendar()">
                     <option value="">All Counties</option>
                 </select>
@@ -885,6 +888,8 @@
         let currentSort = { column: 'Owner Name', ascending: true };
         let stageChartInstance, countyChartInstance, topCountiesChartInstance;
         let activeQuickFilter = null;
+        let activeFollowUpFilter = 'all';
+        let leadIndex = {}; // ownerID -> lead, built from the FULL sheet (not just "With Wendy")
 
         // Status options (Wendy's pipeline)
         const STATUS_OPTIONS = ['New / Awaiting Contact', 'Contact Attempted', 'In Follow-up', 'Maybe / Warm', 'Negotiating', 'Closed – Bought', 'Lost'];
@@ -909,6 +914,25 @@
             const ownerID = lead['Owner ID'] || lead['Owner Name'];
             const raw = normalizeStatus(getLocalStatus(ownerID) || lead['Status']);
             return raw || 'New / Awaiting Contact';
+        }
+
+        function formatCurrency(v) {
+            const n = parseFloat(String(v).replace(/[$,]/g, ''));
+            if (isNaN(n)) return v;
+            return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+        }
+
+        // Keep the legacy Deal Stage column in sync when Status changes
+        const STATUS_TO_DEALSTAGE = {
+            'Negotiating': 'Proposal/Negotiations',
+            'Maybe / Warm': 'Proposal/Negotiations',
+            'Closed – Bought': 'Closed',
+            'Lost': 'Lost'
+        };
+
+        function syncDealStageToStatus(ownerID, status) {
+            const ds = STATUS_TO_DEALSTAGE[status];
+            if (ds) localStorage.setItem(`dealStage_${ownerID}`, ds);
         }
 
         // Call outcomes → optional auto status change
@@ -973,6 +997,14 @@
                 });
                 return obj;
             }).filter(lead => lead['Owner Name']);
+
+            // Index EVERY sheet lead by ownerID so follow-ups resolve even if a lead
+            // isn't in the current "With Wendy" view
+            leadIndex = {};
+            allSheetLeads.forEach(lead => {
+                const id = lead['Owner ID'] || lead['Owner Name'];
+                leadIndex[id] = lead;
+            });
 
             // Initial load: pull "With Wendy" leads
             allLeads = allSheetLeads.filter(lead => lead['Recommended Next Action'] === 'With Wendy');
@@ -1040,6 +1072,11 @@
                     skipEmptyLines: true,
                     complete: (results) => {
                         allLeads = results.data.filter(row => row['Owner Name']);
+                        leadIndex = {};
+                        allLeads.forEach(lead => {
+                            const id = lead['Owner ID'] || lead['Owner Name'];
+                            leadIndex[id] = lead;
+                        });
                         initializeDashboard();
                     },
                     error: (error) => {
@@ -1067,13 +1104,10 @@
             const totalNMA = allLeads.reduce((sum, lead) => sum + (parseFloat(lead.NMA) || 0), 0);
             const negotiatingCount = allLeads.filter(lead => getEffectiveStatus(lead) === 'Negotiating').length;
 
-            const overdueCount = allLeads.filter(lead => {
-                const ownerID = lead['Owner ID'] || lead['Owner Name'];
-                const localFollowUpDate = getLocalCellValue(ownerID, 'Follow Up Date');
-                const followUpDate = localFollowUpDate || lead['Follow Up Date'];
-                if (!followUpDate) return false;
-                const date = new Date(followUpDate);
-                return date < today;
+            const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
+            const overdueCount = getAllFollowUps().filter(f => {
+                const d = new Date(f.date); d.setHours(0, 0, 0, 0);
+                return d < todayMidnight;
             }).length;
 
             document.getElementById('stat-total').textContent = allLeads.length.toLocaleString();
@@ -1148,6 +1182,11 @@
                         const phoneLink = value.replace(/[^\d+]/g, '');
                         classes += (classes ? ' ' : '') + 'editable-cell';
                         cellsHTML += `<td class="${classes}" data-owner-id="${ownerID}" data-column="${col}" style="cursor:pointer;" title="Click to edit"><a href="tel:${phoneLink}" onclick="event.stopPropagation();" style="color:#4a9eff;text-decoration:none;">${value}</a></td>`;
+                    } else if (col === 'Offer Amount') {
+                        classes += (classes ? ' ' : '') + 'editable-cell';
+                        const raw = (value === '—') ? '' : String(value).replace(/[$,]/g, '');
+                        const display = (raw !== '' && !isNaN(parseFloat(raw))) ? formatCurrency(raw) : value;
+                        cellsHTML += `<td class="${classes}" data-owner-id="${ownerID}" data-column="${col}" data-raw="${raw}" style="cursor:pointer;" title="Click to edit">${display}</td>`;
                     } else {
                         classes += (classes ? ' ' : '') + 'editable-cell';
                         cellsHTML += `<td class="${classes}" data-owner-id="${ownerID}" data-column="${col}" style="cursor:pointer;" title="Click to edit">${value}</td>`;
@@ -1165,7 +1204,8 @@
                 cell.addEventListener('click', function() {
                     const ownerID = this.getAttribute('data-owner-id');
                     const column = this.getAttribute('data-column');
-                    const currentValue = this.textContent === '—' ? '' : this.textContent;
+                    const rawAttr = this.getAttribute('data-raw');
+                    const currentValue = rawAttr !== null ? rawAttr : (this.textContent === '—' ? '' : this.textContent);
                     makeEditable(this, ownerID, column, currentValue);
                 });
             });
@@ -1207,49 +1247,77 @@
             });
         }
 
+        // Scan ALL locally-saved follow-up dates (independent of the current grid filter)
+        function getAllFollowUps() {
+            const results = [];
+            const suffix = '_Follow Up Date';
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!key || !key.startsWith('cell_') || !key.endsWith(suffix)) continue;
+                const ownerID = key.slice('cell_'.length, key.length - suffix.length);
+                const date = localStorage.getItem(key);
+                if (!date) continue;
+                // Resolve the lead from the full index, then the current set, else a stub
+                const lead = leadIndex[ownerID]
+                    || allLeads.find(l => (l['Owner ID'] || l['Owner Name']) === ownerID)
+                    || { 'Owner Name': ownerID };
+                results.push({
+                    ownerID,
+                    lead,
+                    date,
+                    notes: getLocalCellValue(ownerID, 'Follow Up Notes') || lead['Follow Up Notes'] || ''
+                });
+            }
+            return results;
+        }
+
         function renderCalendar() {
             const grid = document.getElementById('calendarGrid');
+            const countyFilter = document.getElementById('countryFilter') ? document.getElementById('countryFilter').value : '';
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
-            // Merge Google Sheet data with locally-edited follow-up dates
-            let leadsWithFollowUp = allLeads.map(lead => {
-                const ownerID = lead['Owner ID'] || lead['Owner Name'];
-                const localFollowUpDate = getLocalCellValue(ownerID, 'Follow Up Date');
-                const followUpDate = localFollowUpDate || lead['Follow Up Date'];
+            let followUps = getAllFollowUps();
 
-                if (followUpDate) {
-                    return {
-                        ...lead,
-                        'Follow Up Date': followUpDate,
-                        'Follow Up Notes': getLocalCellValue(ownerID, 'Follow Up Notes') || lead['Follow Up Notes']
-                    };
+            // County filter (Follow-Ups tab dropdown)
+            if (countyFilter) {
+                followUps = followUps.filter(f => f.lead['County Interest Held'] === countyFilter);
+            }
+
+            // Quick filter: all / overdue / upcoming (next 7 days)
+            followUps = followUps.filter(f => {
+                const d = new Date(f.date); d.setHours(0, 0, 0, 0);
+                if (activeFollowUpFilter === 'overdue') return d < today;
+                if (activeFollowUpFilter === 'upcoming') {
+                    const week = new Date(today); week.setDate(week.getDate() + 7);
+                    return d >= today && d <= week;
                 }
-                return null;
-            }).filter(l => l);
+                return true;
+            });
 
-            leadsWithFollowUp.sort((a, b) => new Date(a['Follow Up Date']) - new Date(b['Follow Up Date']));
+            followUps.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-            if (leadsWithFollowUp.length === 0) {
+            if (followUps.length === 0) {
                 grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No scheduled follow-ups</p></div>';
                 return;
             }
 
-            const today = new Date();
             grid.innerHTML = '';
 
-            leadsWithFollowUp.forEach(lead => {
-                const followUpDate = new Date(lead['Follow Up Date']);
+            followUps.forEach(f => {
+                const lead = f.lead;
+                const followUpDate = new Date(f.date);
                 const isOverdue = followUpDate < today;
-                const daysUntil = Math.ceil((followUpDate - today) / (1000 * 60 * 60 * 24));
 
                 const item = document.createElement('div');
                 item.className = `calendar-item ${isOverdue ? 'overdue' : ''}`;
                 item.style.cursor = 'pointer';
                 item.innerHTML = `
-                    <div class="calendar-date">${lead['Follow Up Date']} ${isOverdue ? '🔴 OVERDUE' : ''}</div>
+                    <div class="calendar-date">${f.date} ${isOverdue ? '🔴 OVERDUE' : ''}</div>
                     <div class="calendar-name">${lead['Owner Name']}</div>
-                    <div class="calendar-meta">${lead['County Interest Held']}</div>
+                    <div class="calendar-meta">${lead['County Interest Held'] || ''}</div>
                     <div class="calendar-meta">${lead['Owner Phone'] ? lead['Owner Phone'].split('\n')[0] : 'No phone'}</div>
-                    ${lead['Follow Up Notes'] ? `<div class="calendar-meta" style="margin-top:8px;color:#4a9eff;">📝 ${lead['Follow Up Notes']}</div>` : ''}
+                    ${f.notes ? `<div class="calendar-meta" style="margin-top:8px;color:#4a9eff;">📝 ${f.notes}</div>` : ''}
                 `;
                 item.onclick = () => showDetailModal(lead);
                 grid.appendChild(item);
@@ -1517,6 +1585,14 @@
             renderCalendar();
         }
 
+        function applyFollowUpFilter(name) {
+            activeFollowUpFilter = name;
+            document.querySelectorAll('.quick-filter-btn[data-fufilter]').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-fufilter') === name);
+            });
+            renderCalendar();
+        }
+
         function filterByStatus(targetStatus) {
             // Clear search + quick filter so the status filter is unambiguous
             document.getElementById('searchBox').value = '';
@@ -1597,6 +1673,9 @@
                 }
                 if (col === 'Status') {
                     value = getEffectiveStatus(lead);
+                }
+                if (col === 'Offer Amount' && value !== '—' && !isNaN(parseFloat(String(value).replace(/[$,]/g, '')))) {
+                    value = formatCurrency(value);
                 }
                 if (col === 'Owner Phone' && value !== '—') {
                     const phoneLink = value.replace(/[^\d+]/g, '');
@@ -1685,6 +1764,7 @@
         function saveStatus(ownerID, status) {
             if (status.trim()) {
                 localStorage.setItem(`status_${ownerID}`, status);
+                syncDealStageToStatus(ownerID, status);
             } else {
                 localStorage.removeItem(`status_${ownerID}`);
             }
@@ -1749,6 +1829,7 @@
 
             if (newStatus) {
                 localStorage.setItem(`status_${ownerID}`, newStatus);
+                syncDealStageToStatus(ownerID, newStatus);
             }
 
             closeLogCall();
