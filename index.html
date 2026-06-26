@@ -694,7 +694,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>🎯 Mineral Leads Dashboard</h1>
+            <h1>🎯 Mineral Leads Dashboard <span id="syncStatus" style="font-size:13px;font-weight:600;padding:4px 10px;border-radius:20px;margin-left:6px;white-space:nowrap;">● Connecting…</span></h1>
             <div class="header-stats">
                 <div class="stat-card">
                     <div class="stat-label">Total Leads</div>
@@ -987,6 +987,22 @@
         const CRM_API_URL = 'https://script.google.com/macros/s/AKfycbyLmanvLTrevcAm6r-kF-_PvKOgsMGn3oUucpv24wKY4KjpnF1DCeOwV9VAJAfQWuzM/exec';
 
         let crmStore = {};   // key -> value (the shared overlay: status, follow-ups, notes, call logs)
+        let crmPending = 0;  // outstanding save requests
+
+        function setSyncStatus(state) {
+            const el = document.getElementById('syncStatus');
+            if (!el) return;
+            const styles = {
+                synced:  { text: '● Synced', bg: '#14331f', color: '#4ade80' },
+                saving:  { text: '● Saving…', bg: '#33300f', color: '#fbbf24' },
+                offline: { text: '● Offline — saved on this device', bg: '#3a1a1a', color: '#f87171' },
+                local:   { text: '● Local only', bg: '#2a2a2a', color: '#888' }
+            };
+            const s = styles[state] || styles.synced;
+            el.textContent = s.text;
+            el.style.background = s.bg;
+            el.style.color = s.color;
+        }
 
         async function loadCrmStore() {
             // Seed from this browser's local storage first (offline cache / fallback)
@@ -995,7 +1011,7 @@
                 const k = localStorage.key(i);
                 crmStore[k] = localStorage.getItem(k);
             }
-            if (!CRM_API_URL) return; // sync not configured yet
+            if (!CRM_API_URL) { setSyncStatus('local'); return; } // sync not configured yet
             try {
                 const res = await fetch(CRM_API_URL + '?action=getAll');
                 const data = await res.json(); // { key: value, ... }
@@ -1004,8 +1020,10 @@
                     // mirror server data into local storage as an offline cache
                     Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
                 }
+                setSyncStatus('synced');
             } catch (e) {
                 console.warn('CRM sync unavailable — using local cache', e);
+                setSyncStatus('offline');
             }
         }
 
@@ -1024,12 +1042,20 @@
                 localStorage.removeItem(key);
             }
             if (CRM_API_URL) {
-                // fire-and-forget; text/plain avoids a CORS preflight on Apps Script
+                // text/plain avoids a CORS preflight on Apps Script
+                crmPending++;
+                setSyncStatus('saving');
                 fetch(CRM_API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ key: key, value: v })
-                }).catch(() => {});
+                }).then(() => {
+                    crmPending = Math.max(0, crmPending - 1);
+                    if (crmPending === 0) setSyncStatus('synced');
+                }).catch(() => {
+                    crmPending = Math.max(0, crmPending - 1);
+                    setSyncStatus('offline');
+                });
             }
         }
 
