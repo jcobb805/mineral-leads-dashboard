@@ -932,7 +932,7 @@
 
         function syncDealStageToStatus(ownerID, status) {
             const ds = STATUS_TO_DEALSTAGE[status];
-            if (ds) localStorage.setItem(`dealStage_${ownerID}`, ds);
+            if (ds) crmSet(`dealStage_${ownerID}`, ds);
         }
 
         function attrEsc(s) {
@@ -981,7 +981,60 @@
         const SHEET_NAME = 'Grants Title Review';
         const API_KEY = 'AIzaSyB1lb2tzx0J55ekT_CGC-xAxgS-oJNqU7E'; // Get this from Google Cloud Console
 
+        // ===== Shared CRM storage (cross-device sync via Google Apps Script) =====
+        // Paste the deployed web-app URL below to turn on syncing across all
+        // devices/people. Leave blank and the dashboard uses this browser only.
+        const CRM_API_URL = '';
+
+        let crmStore = {};   // key -> value (the shared overlay: status, follow-ups, notes, call logs)
+
+        async function loadCrmStore() {
+            // Seed from this browser's local storage first (offline cache / fallback)
+            crmStore = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                crmStore[k] = localStorage.getItem(k);
+            }
+            if (!CRM_API_URL) return; // sync not configured yet
+            try {
+                const res = await fetch(CRM_API_URL + '?action=getAll');
+                const data = await res.json(); // { key: value, ... }
+                if (data && typeof data === 'object') {
+                    crmStore = data;
+                    // mirror server data into local storage as an offline cache
+                    Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
+                }
+            } catch (e) {
+                console.warn('CRM sync unavailable — using local cache', e);
+            }
+        }
+
+        function crmGet(key) {
+            if (crmStore[key] != null) return crmStore[key];
+            return localStorage.getItem(key) || '';
+        }
+
+        function crmSet(key, value) {
+            const v = (value == null) ? '' : String(value);
+            if (v.trim()) {
+                crmStore[key] = v;
+                localStorage.setItem(key, v);
+            } else {
+                delete crmStore[key];
+                localStorage.removeItem(key);
+            }
+            if (CRM_API_URL) {
+                // fire-and-forget; text/plain avoids a CORS preflight on Apps Script
+                fetch(CRM_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ key: key, value: v })
+                }).catch(() => {});
+            }
+        }
+
         async function loadData() {
+            await loadCrmStore(); // pull shared data before first render
             // Check if API key is set
             if (API_KEY === 'YOUR_API_KEY_HERE') {
                 console.log('API key not configured, using embedded CSV data');
@@ -1274,11 +1327,10 @@
         function getAllFollowUps() {
             const results = [];
             const suffix = '_Follow Up Date';
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
+            for (const key of Object.keys(crmStore)) {
                 if (!key || !key.startsWith('cell_') || !key.endsWith(suffix)) continue;
                 const ownerID = key.slice('cell_'.length, key.length - suffix.length);
-                const date = localStorage.getItem(key);
+                const date = crmStore[key];
                 if (!date) continue;
                 // Resolve the lead from the full index, then the current set, else a stub
                 const lead = leadIndex[ownerID]
@@ -1754,16 +1806,11 @@
 
         // Local notes management (localStorage)
         function getLocalNotes(ownerID) {
-            const notes = localStorage.getItem(`notes_${ownerID}`);
-            return notes ? notes : '';
+            return crmGet(`notes_${ownerID}`);
         }
 
         function saveLocalNotes(ownerID, notes) {
-            if (notes.trim()) {
-                localStorage.setItem(`notes_${ownerID}`, notes);
-            } else {
-                localStorage.removeItem(`notes_${ownerID}`);
-            }
+            crmSet(`notes_${ownerID}`, notes);
         }
 
         function editNotes(ownerID, ownerName) {
@@ -1790,17 +1837,12 @@
 
         // Status management (localStorage)
         function getLocalStatus(ownerID) {
-            const status = localStorage.getItem(`status_${ownerID}`);
-            return status ? status : '';
+            return crmGet(`status_${ownerID}`);
         }
 
         function saveStatus(ownerID, status) {
-            if (status.trim()) {
-                localStorage.setItem(`status_${ownerID}`, status);
-                syncDealStageToStatus(ownerID, status);
-            } else {
-                localStorage.removeItem(`status_${ownerID}`);
-            }
+            crmSet(`status_${ownerID}`, status);
+            if (status && status.trim()) syncDealStageToStatus(ownerID, status);
             renderGrid(); // Refresh to show updated status
             renderKanban();
             renderAnalytics();
@@ -1861,7 +1903,7 @@
             }
 
             if (newStatus) {
-                localStorage.setItem(`status_${ownerID}`, newStatus);
+                crmSet(`status_${ownerID}`, newStatus);
                 syncDealStageToStatus(ownerID, newStatus);
             }
 
@@ -1873,33 +1915,24 @@
             updateStats();
         }
 
-        // Deal Stage management (localStorage)
+        // Deal Stage management (shared store)
         function getLocalDealStage(ownerID) {
-            const dealStage = localStorage.getItem(`dealStage_${ownerID}`);
-            return dealStage ? dealStage : '';
+            return crmGet(`dealStage_${ownerID}`);
         }
 
         function saveDealStage(ownerID, dealStage) {
-            if (dealStage.trim()) {
-                localStorage.setItem(`dealStage_${ownerID}`, dealStage);
-            } else {
-                localStorage.removeItem(`dealStage_${ownerID}`);
-            }
+            crmSet(`dealStage_${ownerID}`, dealStage);
             renderGrid();
             renderKanban();
         }
 
-        // Inline cell editing (localStorage)
+        // Inline cell editing (shared store)
         function getLocalCellValue(ownerID, column) {
-            return localStorage.getItem(`cell_${ownerID}_${column}`) || '';
+            return crmGet(`cell_${ownerID}_${column}`);
         }
 
         function saveCellValue(ownerID, column, value) {
-            if (value.trim()) {
-                localStorage.setItem(`cell_${ownerID}_${column}`, value);
-            } else {
-                localStorage.removeItem(`cell_${ownerID}_${column}`);
-            }
+            crmSet(`cell_${ownerID}_${column}`, value);
         }
 
         function makeEditable(cell, ownerID, column, currentValue) {
