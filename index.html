@@ -946,12 +946,29 @@
             return String(s == null ? '' : s).replace(/"/g, '&quot;');
         }
 
+        function titleCase(s) {
+            return String(s || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()).trim();
+        }
+
         // Build a pre-filled SMS link (uses the device's own number to send)
         function buildSmsHref(lead) {
             const ownerID = lead['Owner ID'] || lead['Owner Name'];
             const phoneRaw = (getLocalCellValue(ownerID, 'Owner Phone') || lead['Owner Phone'] || '').split('\n')[0].replace(/[^\d+]/g, '');
-            const county = lead['County Interest Held'] ? ` you own in ${lead['County Interest Held']}` : '';
-            const body = `Hello, this is Wendy Hinkle reaching out regarding the mineral interest${county}. I'd love to connect when you have a moment. Thank you!`;
+            const firstName = titleCase((lead['Owner Name'] || '').trim().split(/\s+/)[0]) || 'there';
+            const countyRaw = lead['County Interest Held'] ? titleCase(lead['County Interest Held']) : '';
+            const countyClause = countyRaw ? `${countyRaw} County` : 'your area';
+            const body =
+`Hi ${firstName}, this is Wendy with Platform Energy. I tried calling about your mineral rights in ${countyClause}.
+
+We're actively acquiring mineral interests in the area and would like to make you a fair offer for your ownership.
+
+Would you be open to a quick conversation? I can send over the details or answer any questions you have. You can also reach me by email.
+
+Thanks,
+Wendy Hinkle
+Platform Energy
+(512) 599-3411
+wendylhinkle@gmail.com`;
             return `sms:${phoneRaw}?&body=${encodeURIComponent(body)}`;
         }
 
@@ -993,7 +1010,7 @@
         // devices/people. Leave blank and the dashboard uses this browser only.
         const CRM_API_URL = 'https://script.google.com/macros/s/AKfycbyLmanvLTrevcAm6r-kF-_PvKOgsMGn3oUucpv24wKY4KjpnF1DCeOwV9VAJAfQWuzM/exec';
 
-        const APP_VERSION = 'v7 · 2026-06-29';
+        const APP_VERSION = 'v8 · 2026-06-29';
         let crmStore = {};   // key -> value (the shared overlay: status, follow-ups, notes, call logs)
         let crmPending = 0;  // outstanding save requests
 
