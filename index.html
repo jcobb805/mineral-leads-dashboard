@@ -697,7 +697,11 @@
 <body>
     <div class="container">
         <header>
-            <h1>🎯 Mineral Leads Dashboard <span id="syncStatus" style="font-size:13px;font-weight:600;padding:4px 10px;border-radius:20px;margin-left:6px;white-space:nowrap;">● Connecting…</span></h1>
+            <h1>🎯 Mineral Leads Dashboard
+                <span id="syncStatus" style="font-size:13px;font-weight:600;padding:4px 10px;border-radius:20px;margin-left:6px;white-space:nowrap;">● Connecting…</span>
+                <button onclick="refreshShared()" title="Pull the latest synced data" style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;margin-left:4px;background:#1a3a52;color:#4a9eff;border:1px solid #4a9eff;cursor:pointer;white-space:nowrap;">↻ Sync now</button>
+                <span id="appVersion" style="font-size:11px;color:#666;margin-left:8px;font-weight:400;"></span>
+            </h1>
             <div class="header-stats">
                 <div class="stat-card">
                     <div class="stat-label">Total Leads</div>
@@ -989,8 +993,20 @@
         // devices/people. Leave blank and the dashboard uses this browser only.
         const CRM_API_URL = 'https://script.google.com/macros/s/AKfycbyLmanvLTrevcAm6r-kF-_PvKOgsMGn3oUucpv24wKY4KjpnF1DCeOwV9VAJAfQWuzM/exec';
 
+        const APP_VERSION = 'v7 · 2026-06-29';
         let crmStore = {};   // key -> value (the shared overlay: status, follow-ups, notes, call logs)
         let crmPending = 0;  // outstanding save requests
+
+        async function refreshShared() {
+            setSyncStatus('saving');
+            await loadCrmStore();
+            filteredLeads = [...allLeads];
+            renderGrid();
+            renderKanban();
+            renderCalendar();
+            renderAnalytics();
+            updateStats();
+        }
 
         function setSyncStatus(state) {
             const el = document.getElementById('syncStatus');
@@ -1195,6 +1211,8 @@
         }
 
         function initializeDashboard() {
+            const vEl = document.getElementById('appVersion');
+            if (vEl) vEl.textContent = APP_VERSION;
             filteredLeads = [...allLeads];
             updateStats();
             renderGrid();
