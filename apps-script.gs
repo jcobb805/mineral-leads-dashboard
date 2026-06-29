@@ -11,13 +11,17 @@ function getSheet_() {
     sh = ss.insertSheet(SHEET_NAME);
     sh.appendRow(['key', 'value', 'updatedAt']);
   }
+  // Force key + value columns to PLAIN TEXT so dates/zips/numbers
+  // are never auto-converted by Sheets (e.g. "6/9/2026" staying a string).
+  sh.getRange('A:B').setNumberFormat('@');
   return sh;
 }
 
 // GET ?action=getAll  ->  { key: value, ... }
 function doGet(e) {
   const sh = getSheet_();
-  const rows = sh.getDataRange().getValues();
+  // getDisplayValues returns exactly what's shown, as strings (no Date/number coercion)
+  const rows = sh.getDataRange().getDisplayValues();
   const out = {};
   for (let i = 1; i < rows.length; i++) {
     const key = rows[i][0];

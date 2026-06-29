@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Mineral Leads Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -1283,7 +1286,8 @@
                     } else if (col === 'Owner Phone' && value !== '—') {
                         const phoneLink = value.replace(/[^\d+]/g, '');
                         classes += (classes ? ' ' : '') + 'editable-cell';
-                        cellsHTML += `<td class="${classes}" data-owner-id="${ownerID}" data-column="${col}" style="cursor:pointer;" title="Click to edit"><a href="tel:${phoneLink}" onclick="event.stopPropagation();" style="color:#4a9eff;text-decoration:none;">${value}</a></td>`;
+                        const smsHref = buildSmsHref(lead);
+                        cellsHTML += `<td class="${classes}" data-owner-id="${ownerID}" data-column="${col}" style="cursor:pointer;" title="Click to edit"><a href="tel:${phoneLink}" onclick="event.stopPropagation();" style="color:#4a9eff;text-decoration:none;">${value}</a> <a href="${attrEsc(smsHref)}" onclick="event.stopPropagation();" title="Send text" style="text-decoration:none;margin-left:4px;">💬</a></td>`;
                     } else if (col === 'Offer Amount') {
                         classes += (classes ? ' ' : '') + 'editable-cell';
                         const raw = (value === '—') ? '' : String(value).replace(/[$,]/g, '');
