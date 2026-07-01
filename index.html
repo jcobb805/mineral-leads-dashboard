@@ -762,12 +762,7 @@
                             <th onclick="sortTable('Email')">Email</th>
                             <th onclick="sortTable('Status')">Status</th>
                             <th class="nma-col" onclick="sortTable('NMA')">NMA</th>
-                            <th onclick="sortTable('Notes')">Notes</th>
                             <th onclick="sortTable('Legal Description')">Legal Description</th>
-                            <th onclick="sortTable('Owner Street Address')">Street Address</th>
-                            <th onclick="sortTable('Owner City')">City</th>
-                            <th onclick="sortTable('Owner State')">State</th>
-                            <th onclick="sortTable('Owner Zip')">Zip</th>
                             <th onclick="sortTable('Offer Amount')">Offer Amount</th>
                             <th onclick="sortTable('County Interest Held')">County Interest Held</th>
                             <th onclick="sortTable('Last Contact Date')">Last Contact Date</th>
@@ -1010,7 +1005,7 @@ wendylhinkle@gmail.com`;
         // devices/people. Leave blank and the dashboard uses this browser only.
         const CRM_API_URL = 'https://script.google.com/macros/s/AKfycbyLmanvLTrevcAm6r-kF-_PvKOgsMGn3oUucpv24wKY4KjpnF1DCeOwV9VAJAfQWuzM/exec';
 
-        const APP_VERSION = 'v12 · 2026-07-01';
+        const APP_VERSION = 'v13 · 2026-07-01';
         let crmStore = {};   // key -> value (the shared overlay: status, follow-ups, notes, call logs)
         let crmPending = 0;  // outstanding save requests
 
@@ -1299,7 +1294,7 @@ wendylhinkle@gmail.com`;
             tbody.innerHTML = '';
 
             if (filteredLeads.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="21" style="text-align:center;color:#666;padding:40px;">No leads match your filters</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="16" style="text-align:center;color:#666;padding:40px;">No leads match your filters</td></tr>`;
                 return;
             }
 
@@ -1316,8 +1311,8 @@ wendylhinkle@gmail.com`;
             });
 
             const columns = [
-                'Owner Name', 'Main Contact', 'Owner Phone', 'Email', 'Status', 'NMA', 'Notes', 'Legal Description', 'Owner Street Address', 'Owner City',
-                'Owner State', 'Owner Zip', 'Offer Amount', 'County Interest Held', 'Last Contact Date', 'Follow Up Needed', 'Follow Up Date', 'Follow Up Notes', 'Deal Stage'
+                'Owner Name', 'Main Contact', 'Owner Phone', 'Email', 'Status', 'NMA', 'Legal Description',
+                'Offer Amount', 'County Interest Held', 'Last Contact Date', 'Follow Up Needed', 'Follow Up Date', 'Follow Up Notes', 'Deal Stage'
             ];
 
             filteredLeads.forEach(lead => {
