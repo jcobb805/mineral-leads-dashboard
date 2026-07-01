@@ -1010,7 +1010,7 @@ wendylhinkle@gmail.com`;
         // devices/people. Leave blank and the dashboard uses this browser only.
         const CRM_API_URL = 'https://script.google.com/macros/s/AKfycbyLmanvLTrevcAm6r-kF-_PvKOgsMGn3oUucpv24wKY4KjpnF1DCeOwV9VAJAfQWuzM/exec';
 
-        const APP_VERSION = 'v10 · 2026-06-30';
+        const APP_VERSION = 'v11 · 2026-07-01';
         let crmStore = {};   // key -> value (the shared overlay: status, follow-ups, notes, call logs)
         let crmPending = 0;  // outstanding save requests
 
@@ -1061,19 +1061,28 @@ wendylhinkle@gmail.com`;
                 crmStore[k] = localStorage.getItem(k);
             }
             if (!CRM_API_URL) { setSyncStatus('local'); return; } // sync not configured yet
-            try {
-                const res = await fetch(CRM_API_URL + '?action=getAll');
-                const data = await res.json(); // { key: value, ... }
-                if (data && typeof data === 'object') {
-                    crmStore = data;
-                    // mirror server data into local storage as an offline cache
-                    Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
+            let lastErr;
+            for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                    const res = await fetch(CRM_API_URL + '?action=getAll', { redirect: 'follow' });
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    const data = await res.json(); // { key: value, ... }
+                    if (data && typeof data === 'object') {
+                        crmStore = data;
+                        // mirror server data into local storage as an offline cache
+                        Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
+                    }
+                    setSyncStatus('synced');
+                    return;
+                } catch (e) {
+                    lastErr = e;
+                    await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
                 }
-                setSyncStatus('synced');
-            } catch (e) {
-                console.warn('CRM sync unavailable — using local cache', e);
-                setSyncStatus('offline');
             }
+            console.warn('CRM sync unavailable — using local cache', lastErr);
+            setSyncStatus('offline');
+            const el = document.getElementById('syncStatus');
+            if (el) el.title = 'Sync error: ' + (lastErr && lastErr.message ? lastErr.message : String(lastErr));
         }
 
         // Ask the Apps Script to promote "Ready for Outreach" rows to "With Wendy"
