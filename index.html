@@ -1010,7 +1010,7 @@ wendylhinkle@gmail.com`;
         // devices/people. Leave blank and the dashboard uses this browser only.
         const CRM_API_URL = 'https://script.google.com/macros/s/AKfycbyLmanvLTrevcAm6r-kF-_PvKOgsMGn3oUucpv24wKY4KjpnF1DCeOwV9VAJAfQWuzM/exec';
 
-        const APP_VERSION = 'v11 · 2026-07-01';
+        const APP_VERSION = 'v12 · 2026-07-01';
         let crmStore = {};   // key -> value (the shared overlay: status, follow-ups, notes, call logs)
         let crmPending = 0;  // outstanding save requests
 
@@ -1409,9 +1409,10 @@ wendylhinkle@gmail.com`;
                 stageLeads.forEach(lead => {
                     const ownerID = lead['Owner ID'] || lead['Owner Name'];
                     const lastContact = getLocalCellValue(ownerID, 'Last Contact Date') || lead['Last Contact Date'];
+                    const displayName = getLocalCellValue(ownerID, 'Owner Name') || lead['Owner Name'];
                     html += `
-                        <div class="kanban-card" onclick="goToGridRow('${lead['Owner Name'].replace(/'/g, "\\'")}')" style="cursor: pointer;">
-                            <div class="kanban-name">${lead['Owner Name']}</div>
+                        <div class="kanban-card" onclick="openLeadById('${String(ownerID).replace(/'/g, "\\'")}')" style="cursor: pointer;">
+                            <div class="kanban-name">${displayName}</div>
                             <div class="kanban-meta">${lead['County Interest Held'] || ''}</div>
                             <div class="kanban-nma">${parseFloat(lead.NMA || 0).toFixed(2)} NMA</div>
                             <div class="kanban-meta">${lastContact ? `Last: ${lastContact}` : 'Never contacted'}</div>
@@ -1824,12 +1825,19 @@ wendylhinkle@gmail.com`;
             }
         }
 
+        // Open a lead's detail popup by its unique Owner ID (never by name —
+        // names can be edited, duplicated, or reformatted).
+        function openLeadById(ownerID) {
+            const lead = allLeads.find(l => (l['Owner ID'] || l['Owner Name']) === ownerID)
+                || leadIndex[ownerID]
+                || { 'Owner Name': ownerID };
+            showDetailModal(lead);
+        }
+
+        // Backward-compatible: still resolve by name if something calls it
         function goToGridRow(ownerName) {
-            // Find the lead and show detail modal
             const lead = allLeads.find(l => l['Owner Name'] === ownerName);
-            if (lead) {
-                showDetailModal(lead);
-            }
+            if (lead) showDetailModal(lead);
         }
 
         function showDetailModal(lead) {
