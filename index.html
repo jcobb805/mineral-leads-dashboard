@@ -147,7 +147,8 @@
 
         /* Grid View */
         .table-wrapper {
-            overflow-x: auto;
+            overflow: auto;
+            max-height: calc(100vh - 300px);
             background: #1a1a1a;
             border-radius: 8px;
             border: 1px solid #333;
@@ -208,11 +209,20 @@
             left: 390px;
         }
 
+        /* Header cells: freeze on top while scrolling down */
+        thead th {
+            position: sticky;
+            top: 0;
+            z-index: 12;
+        }
+
+        /* Corner cells: frozen on BOTH top and left */
         th:nth-child(1), th:nth-child(2), th:nth-child(3), th:nth-child(4) {
             position: sticky;
             left: 0;
+            top: 0;
             background: #252525;
-            z-index: 11;
+            z-index: 13;
         }
 
         th:nth-child(2) {
@@ -1005,7 +1015,7 @@ wendylhinkle@gmail.com`;
         // devices/people. Leave blank and the dashboard uses this browser only.
         const CRM_API_URL = 'https://script.google.com/macros/s/AKfycbyLmanvLTrevcAm6r-kF-_PvKOgsMGn3oUucpv24wKY4KjpnF1DCeOwV9VAJAfQWuzM/exec';
 
-        const APP_VERSION = 'v13 · 2026-07-01';
+        const APP_VERSION = 'v14 · 2026-07-01';
         let crmStore = {};   // key -> value (the shared overlay: status, follow-ups, notes, call logs)
         let crmPending = 0;  // outstanding save requests
 
