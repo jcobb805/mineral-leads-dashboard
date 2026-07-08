@@ -767,7 +767,7 @@
                         <tr id="headerRow">
                             <th>Log Call</th>
                             <th onclick="sortTable('Owner Name')">Owner Name</th>
-                            <th onclick="sortTable('Main Contact')">Main Contact</th>
+                            <th onclick="sortTable('In Care Of')">Main Contact</th>
                             <th onclick="sortTable('Owner Phone')">Phone</th>
                             <th onclick="sortTable('Email')">Email</th>
                             <th onclick="sortTable('Status')">Status</th>
@@ -1015,7 +1015,7 @@ wendylhinkle@gmail.com`;
         // devices/people. Leave blank and the dashboard uses this browser only.
         const CRM_API_URL = 'https://script.google.com/macros/s/AKfycbyLmanvLTrevcAm6r-kF-_PvKOgsMGn3oUucpv24wKY4KjpnF1DCeOwV9VAJAfQWuzM/exec';
 
-        const APP_VERSION = 'v14 · 2026-07-01';
+        const APP_VERSION = 'v15 · 2026-07-08';
         let crmStore = {};   // key -> value (the shared overlay: status, follow-ups, notes, call logs)
         let crmPending = 0;  // outstanding save requests
 
@@ -1321,7 +1321,7 @@ wendylhinkle@gmail.com`;
             });
 
             const columns = [
-                'Owner Name', 'Main Contact', 'Owner Phone', 'Email', 'Status', 'NMA', 'Legal Description',
+                'Owner Name', 'In Care Of', 'Owner Phone', 'Email', 'Status', 'NMA', 'Legal Description',
                 'Offer Amount', 'County Interest Held', 'Last Contact Date', 'Follow Up Needed', 'Follow Up Date', 'Follow Up Notes', 'Deal Stage'
             ];
 
@@ -1713,7 +1713,7 @@ wendylhinkle@gmail.com`;
 
         function exportCSV() {
             const exportColumns = [
-                'Owner Name', 'Main Contact', 'Owner Phone', 'Email', 'Status', 'NMA', 'Notes', 'Legal Description', 'Owner Street Address', 'Owner City',
+                'Owner Name', 'In Care Of', 'Owner Phone', 'Email', 'Status', 'NMA', 'Notes', 'Legal Description', 'Owner Street Address', 'Owner City',
                 'Owner State', 'Owner Zip', 'Offer Amount', 'County Interest Held', 'Last Contact Date', 'Follow Up Needed', 'Follow Up Date', 'Follow Up Notes', 'Deal Stage', 'My Notes'
             ];
 
@@ -1852,7 +1852,7 @@ wendylhinkle@gmail.com`;
             document.getElementById('detailName').textContent = lead['Owner Name'];
 
             const columns = [
-                'Owner Name', 'Main Contact', 'Owner Phone', 'Email', 'Status', 'NMA', 'Notes', 'Legal Description', 'Owner Street Address', 'Owner City',
+                'Owner Name', 'In Care Of', 'Owner Phone', 'Email', 'Status', 'NMA', 'Notes', 'Legal Description', 'Owner Street Address', 'Owner City',
                 'Owner State', 'Owner Zip', 'Offer Amount', 'County Interest Held', 'Last Contact Date', 'Follow Up Needed', 'Follow Up Date', 'Follow Up Notes', 'Deal Stage'
             ];
 
@@ -1882,7 +1882,8 @@ wendylhinkle@gmail.com`;
                     if (col === 'Offer Amount') raw = String(raw).replace(/[$,]/g, '');
                     control = `<input type="text" value="${attrEsc(raw)}" onchange="saveDetailField('${escId}', '${col}', this.value)" style="${inputStyle}">`;
                 }
-                detailHTML += `<div style="display:flex;align-items:center;"><strong style="font-size:12px;color:#888;">${col}</strong></div><div>${control}</div>`;
+                const label = (col === 'In Care Of') ? 'Main Contact' : col;
+                detailHTML += `<div style="display:flex;align-items:center;"><strong style="font-size:12px;color:#888;">${label}</strong></div><div>${control}</div>`;
             });
 
             document.getElementById('detailContent').innerHTML = detailHTML;
