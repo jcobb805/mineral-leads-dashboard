@@ -278,6 +278,14 @@
             line-height: 1.4;
         }
 
+        td.care-col, th.care-col {
+            white-space: normal;
+            min-width: 130px;
+            max-width: 130px;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
 
         tr:hover {
             background: #242424;
@@ -767,7 +775,7 @@
                         <tr id="headerRow">
                             <th>Log Call</th>
                             <th onclick="sortTable('Owner Name')">Owner Name</th>
-                            <th onclick="sortTable('In Care Of')">Main Contact</th>
+                            <th class="care-col" onclick="sortTable('In Care Of')">Main Contact</th>
                             <th onclick="sortTable('Owner Phone')">Phone</th>
                             <th onclick="sortTable('Email')">Email</th>
                             <th onclick="sortTable('Status')">Status</th>
@@ -1015,7 +1023,7 @@ wendylhinkle@gmail.com`;
         // devices/people. Leave blank and the dashboard uses this browser only.
         const CRM_API_URL = 'https://script.google.com/macros/s/AKfycbyLmanvLTrevcAm6r-kF-_PvKOgsMGn3oUucpv24wKY4KjpnF1DCeOwV9VAJAfQWuzM/exec';
 
-        const APP_VERSION = 'v15 · 2026-07-08';
+        const APP_VERSION = 'v16 · 2026-07-08';
         let crmStore = {};   // key -> value (the shared overlay: status, follow-ups, notes, call logs)
         let crmPending = 0;  // outstanding save requests
 
@@ -1347,6 +1355,7 @@ wendylhinkle@gmail.com`;
 
                     let classes = '';
                     if (col === 'Owner Phone') classes = 'phone-col';
+                    else if (col === 'In Care Of') classes = 'care-col';
                     else if (col === 'Owner Street Address') classes = 'address-col';
                     else if (col === 'Legal Description') classes = 'legal-col';
                     else if (col === 'Notes') classes = 'notes-col';
