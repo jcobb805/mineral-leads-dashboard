@@ -966,7 +966,7 @@
         // Build a pre-filled SMS link (uses the device's own number to send)
         function buildSmsHref(lead) {
             const ownerID = lead['Owner ID'] || lead['Owner Name'];
-            const phoneRaw = (getLocalCellValue(ownerID, 'Owner Phone') || lead['Owner Phone'] || '').split('\n')[0].replace(/[^\d+]/g, '');
+            const phoneRaw = resolveCell(ownerID, 'Owner Phone', lead['Owner Phone']).split('\n')[0].replace(/[^\d+]/g, '');
             const firstName = titleCase((lead['Owner Name'] || '').trim().split(/\s+/)[0]) || 'there';
             const countyRaw = lead['County Interest Held'] ? titleCase(lead['County Interest Held']) : '';
             const countyClause = countyRaw ? `${countyRaw} County` : 'your area';
@@ -1023,7 +1023,7 @@ wendylhinkle@gmail.com`;
         // devices/people. Leave blank and the dashboard uses this browser only.
         const CRM_API_URL = 'https://script.google.com/macros/s/AKfycbyLmanvLTrevcAm6r-kF-_PvKOgsMGn3oUucpv24wKY4KjpnF1DCeOwV9VAJAfQWuzM/exec';
 
-        const APP_VERSION = 'v16 · 2026-07-08';
+        const APP_VERSION = 'v17 · 2026-07-08';
         let crmStore = {};   // key -> value (the shared overlay: status, follow-ups, notes, call logs)
         let crmPending = 0;  // outstanding save requests
 
@@ -1345,9 +1345,8 @@ wendylhinkle@gmail.com`;
                 // Log Call is the first (frozen) column
                 let cellsHTML = `<td><button class="call-btn" onclick="openLogCall('${ownerID.replace(/'/g, "\\'")}', '${(lead['Owner Name'] || '').replace(/'/g, "\\'")}')">📞 Log Call</button></td>`;
                 columns.forEach(col => {
-                    let value = lead[col] || '—';
-                    const localValue = getLocalCellValue(ownerID, col);
-                    if (localValue) value = localValue;
+                    let value = resolveCell(ownerID, col, lead[col]);
+                    if (value === '') value = '—';
 
                     if (col === 'NMA' && !isNaN(value) && value !== '—') {
                         value = parseFloat(value).toFixed(2);
@@ -1448,7 +1447,7 @@ wendylhinkle@gmail.com`;
                 if (!key || !key.startsWith('cell_') || !key.endsWith(suffix)) continue;
                 const ownerID = key.slice('cell_'.length, key.length - suffix.length);
                 const date = crmStore[key];
-                if (!date) continue;
+                if (!date || date === CLEARED_TOKEN) continue;
                 // Resolve the lead from the full index, then the current set, else a stub
                 const lead = leadIndex[ownerID]
                     || allLeads.find(l => (l['Owner ID'] || l['Owner Name']) === ownerID)
@@ -1868,7 +1867,7 @@ wendylhinkle@gmail.com`;
             const inputStyle = 'width:100%;padding:6px 8px;background:#252525;border:1px solid #333;color:#e0e0e0;border-radius:4px;font-size:13px;';
 
             // Call + Text action buttons
-            const phoneRaw = (getLocalCellValue(ownerID, 'Owner Phone') || lead['Owner Phone'] || '').split('\n')[0].replace(/[^\d+]/g, '');
+            const phoneRaw = resolveCell(ownerID, 'Owner Phone', lead['Owner Phone']).split('\n')[0].replace(/[^\d+]/g, '');
             let actionsHTML = '<div style="grid-column:1 / -1;display:flex;gap:10px;margin-bottom:6px;">';
             if (phoneRaw) {
                 actionsHTML += `<a class="call-btn" href="tel:${phoneRaw}" style="text-decoration:none;">📞 Call</a>`;
@@ -1887,7 +1886,7 @@ wendylhinkle@gmail.com`;
                     control = `<select onchange="saveDealStage('${escId}', this.value)" style="${inputStyle}cursor:pointer;"><option value="">—</option>` +
                         ['Lost', 'Proposal/Negotiations', 'Closed'].map(o => `<option value="${o}" ${ds === o ? 'selected' : ''}>${o}</option>`).join('') + `</select>`;
                 } else {
-                    let raw = getLocalCellValue(ownerID, col) || lead[col] || '';
+                    let raw = resolveCell(ownerID, col, lead[col]);
                     if (col === 'Offer Amount') raw = String(raw).replace(/[$,]/g, '');
                     control = `<input type="text" value="${attrEsc(raw)}" onchange="saveDetailField('${escId}', '${col}', this.value)" style="${inputStyle}">`;
                 }
@@ -2052,12 +2051,26 @@ wendylhinkle@gmail.com`;
         }
 
         // Inline cell editing (shared store)
+        // A deliberately-cleared field is stored as CLEARED_TOKEN so it stays blank
+        // instead of falling back to the Google Sheet value.
+        const CLEARED_TOKEN = '__CLEARED__';
+
         function getLocalCellValue(ownerID, column) {
-            return crmGet(`cell_${ownerID}_${column}`);
+            const v = crmGet(`cell_${ownerID}_${column}`);
+            return v === CLEARED_TOKEN ? '' : v;
+        }
+
+        // Resolve what to actually show: explicit override (incl. cleared) wins over the sheet value
+        function resolveCell(ownerID, column, sheetValue) {
+            const raw = crmGet(`cell_${ownerID}_${column}`);
+            if (raw === CLEARED_TOKEN) return '';
+            if (raw) return raw;
+            return sheetValue || '';
         }
 
         function saveCellValue(ownerID, column, value) {
-            crmSet(`cell_${ownerID}_${column}`, value);
+            const v = (value == null) ? '' : String(value);
+            crmSet(`cell_${ownerID}_${column}`, v.trim() === '' ? CLEARED_TOKEN : v);
         }
 
         function makeEditable(cell, ownerID, column, currentValue) {
